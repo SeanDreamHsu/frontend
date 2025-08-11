@@ -610,23 +610,31 @@ const App = () => {
   
   // Authentication Listener
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    if (process.env.NODE_ENV === 'test') {
+      setAuthLoading(false);
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        user.getIdTokenResult().then((idTokenResult) => {
-          setUserToken(idTokenResult.token);
-          const roleFromClaims = idTokenResult.claims.role || 'b2c';
-          setUserRole(roleFromClaims);
-          setShowLogin(false);
-          setAuthLoading(false);
-        });
+        const idTokenResult = await user.getIdTokenResult();
+        setUserToken(idTokenResult.token);
+        setUserRole(idTokenResult.claims.role || 'b2c');
+        setShowLogin(false);
       } else {
         setUserToken(null);
         setUserRole(null);
-        setAuthLoading(false);
       }
+      setAuthLoading(false);
     });
-    return () => unsubscribe();
+    return () => unsubscribe && unsubscribe();
   }, []);
+
+  // Ensure only admins can access the admin dashboard
+  useEffect(() => {
+    if (currentView === 'admin' && userRole !== 'admin') {
+      setCurrentView('shipping');
+    }
+  }, [currentView, userRole]);
 
   const handleSignOut = () => {
     signOut(auth).catch((error) => console.error("Sign out error", error));
@@ -756,7 +764,7 @@ const App = () => {
       
       <main className="pt-28 pb-8">
         <div className="bg-white p-6 sm:p-8 rounded-xl shadow-2xl w-full max-w-full md:max-w-4xl lg:max-w-6xl border border-blue-200 mx-auto">
-            {currentView === 'admin' ? (
+            {currentView === 'admin' && userRole === 'admin' ? (
                 <AdminDashboard userToken={userToken} />
             ) : (
                 <>
