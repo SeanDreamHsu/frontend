@@ -162,14 +162,12 @@ const fetchAddressSuggestions = async (query) => {
   try {
     const response = await fetch(`${BACKEND_BASE_URL}/places-autocomplete?input=${encodeURIComponent(query)}`);
     if (!response.ok) {
-      console.error("Failed to fetch address suggestions from backend.");
-      return [];
+      const message = await response.text().catch(() => 'Failed to fetch address suggestions from backend.');
+      throw new Error(message);
     }
-    const data = await response.json();
-    return data;
+    return await response.json();
   } catch (error) {
-    console.error("Error calling address suggestions API:", error);
-    return [];
+    throw new Error(error.message || 'Network error while fetching address suggestions.');
   }
 };
 
@@ -361,15 +359,35 @@ const AddressForm = ({ type, values, setters }) => {
     const title = type.charAt(0).toUpperCase() + type.slice(1);
     const [suggestions, setSuggestions] = useState([]);
     const [isSearching, setIsSearching] = useState(false);
+    const [error, setError] = useState('');
+    const [fieldErrors, setFieldErrors] = useState({});
     const suggestionsRef = useRef(null);
 
     const debouncedFetch = useCallback(debounce(async (query) => {
         if (query.length < 3) { setSuggestions([]); setIsSearching(false); return; }
         setIsSearching(true);
-        const result = await fetchAddressSuggestions(query);
-        setSuggestions(result);
-        setIsSearching(false);
+        try {
+            const result = await fetchAddressSuggestions(query);
+            setSuggestions(result);
+            setError('');
+        } catch (err) {
+            setError(err.message);
+            setSuggestions([]);
+        } finally {
+            setIsSearching(false);
+        }
     }, 500), []);
+
+    const validateField = (name, value) => {
+        let message = '';
+        if (!value.trim()) {
+            message = 'This field is required';
+        } else if (name === 'zip' && !/^\d{5}$/.test(value)) {
+            message = 'Valid 5-digit zip required';
+        }
+        setFieldErrors(prev => ({ ...prev, [name]: message }));
+        return !message;
+    };
 
     const handleStreet1Change = (e) => {
         const value = e.target.value;
@@ -399,10 +417,13 @@ const AddressForm = ({ type, values, setters }) => {
         <section className="p-6 bg-blue-50 rounded-xl border border-blue-100">
             <h2 className="text-2xl font-semibold text-gray-700 mb-6 flex items-center"><MapPin className="mr-3 text-blue-500" size={24} /> {title} Info</h2>
             <div className="grid grid-cols-1 gap-6">
-                <input required value={values.name} onChange={e => setters.setName(e.target.value)} placeholder="Name" className="w-full p-3 border rounded-lg" />
+                <Alert type="error" message={error} />
+                <input required value={values.name} onChange={e => { setters.setName(e.target.value); validateField('name', e.target.value); }} onBlur={e => validateField('name', e.target.value)} placeholder="Name" className="w-full p-3 border rounded-lg" />
+                {fieldErrors.name && <p className="text-sm text-red-600">{fieldErrors.name}</p>}
                 <input value={values.company} onChange={e => setters.setCompany(e.target.value)} placeholder="Company (Optional)" className="w-full p-3 border rounded-lg" />
                 <div className="relative" ref={suggestionsRef}>
-                    <input required value={values.street1} onChange={handleStreet1Change} placeholder="Street 1" className="w-full p-3 border rounded-lg" />
+                    <input required value={values.street1} onChange={e => { handleStreet1Change(e); validateField('street1', e.target.value); }} onBlur={e => validateField('street1', e.target.value)} placeholder="Street 1" className="w-full p-3 border rounded-lg" />
+                    {fieldErrors.street1 && <p className="text-sm text-red-600">{fieldErrors.street1}</p>}
                     {isSearching && <Loader2 className="animate-spin absolute right-3 top-3 text-gray-400" />}
                     {suggestions.length > 0 && (
                         <ul className="absolute z-10 w-full bg-white border rounded-lg mt-1 shadow-lg max-h-60 overflow-y-auto">
@@ -414,12 +435,15 @@ const AddressForm = ({ type, values, setters }) => {
                 </div>
                 <input value={values.street2} onChange={e => setters.setStreet2(e.target.value)} placeholder="Street 2" className="w-full p-3 border rounded-lg" />
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <input required value={values.city} onChange={e => setters.setCity(e.target.value)} placeholder="City" className="w-full p-3 border rounded-lg" />
-                    <select required value={values.state} onChange={e => setters.setState(e.target.value)} className="w-full p-3 border rounded-lg bg-white text-base">
+                    <input required value={values.city} onChange={e => { setters.setCity(e.target.value); validateField('city', e.target.value); }} onBlur={e => validateField('city', e.target.value)} placeholder="City" className="w-full p-3 border rounded-lg" />
+                    {fieldErrors.city && <p className="text-sm text-red-600">{fieldErrors.city}</p>}
+                    <select required value={values.state} onChange={e => { setters.setState(e.target.value); validateField('state', e.target.value); }} onBlur={e => validateField('state', e.target.value)} className="w-full p-3 border rounded-lg bg-white text-base">
                         <option value="">Select State</option>
                         {usStates.map(state => <option key={state.abbreviation} value={state.abbreviation}>{state.abbreviation}</option>)}
                     </select>
-                    <input required value={values.zip} onChange={e => setters.setZip(e.target.value)} placeholder="Zip Code" pattern="[0-9]{5}" title="Enter a 5-digit zip code" className="w-full p-3 border rounded-lg" />
+                    {fieldErrors.state && <p className="text-sm text-red-600">{fieldErrors.state}</p>}
+                    <input required value={values.zip} onChange={e => { setters.setZip(e.target.value); validateField('zip', e.target.value); }} onBlur={e => validateField('zip', e.target.value)} placeholder="Zip Code" pattern="[0-9]{5}" title="Enter a 5-digit zip code" className="w-full p-3 border rounded-lg" />
+                    {fieldErrors.zip && <p className="text-sm text-red-600">{fieldErrors.zip}</p>}
                 </div>
                 {type === 'destination' && (
                     <div className="mt-4">
@@ -439,14 +463,28 @@ const AddressForm = ({ type, values, setters }) => {
 
 const PackageForm = ({ values, setters, onOptionChange }) => {
     const availablePackages = carrierDetailsMap.fedex.services.find(s => s.serviceCode === values.selectedServiceCode)?.packages || [];
+    const [errors, setErrors] = useState({});
+
+    const validateField = (name, value) => {
+        let message = '';
+        if (!value) {
+            message = 'Required';
+        } else if (['weight', 'length', 'width', 'height'].includes(name) && (isNaN(value) || parseFloat(value) <= 0)) {
+            message = 'Must be a positive number';
+        }
+        setErrors(prev => ({ ...prev, [name]: message }));
+        return !message;
+    };
 
     const handleServiceChange = (e) => {
         setters.setSelectedServiceCode(e.target.value);
+        validateField('selectedServiceCode', e.target.value);
         onOptionChange();
     };
 
     const handlePackageChange = (e) => {
         setters.setPackageCode(e.target.value);
+        validateField('packageCode', e.target.value);
         onOptionChange();
     };
 
@@ -455,20 +493,24 @@ const PackageForm = ({ values, setters, onOptionChange }) => {
             <h2 className="text-2xl font-semibold text-gray-700 mb-6 flex items-center"><Package className="mr-3 text-blue-500" size={24} /> Package & Carrier</h2>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
                 <div className="relative">
-                    <input required min="0.1" value={values.weight} onChange={e => setters.setWeight(e.target.value)} placeholder="Weight" type="number" className="w-full p-3 border rounded-lg pr-12" />
+                    <input required min="0.1" value={values.weight} onChange={e => { setters.setWeight(e.target.value); validateField('weight', e.target.value); }} onBlur={e => validateField('weight', e.target.value)} placeholder="Weight" type="number" className="w-full p-3 border rounded-lg pr-12" />
                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">lbs</span>
+                    {errors.weight && <p className="text-sm text-red-600">{errors.weight}</p>}
                 </div>
                 <div className="relative">
-                    <input required min="1" value={values.length} onChange={e => setters.setLength(e.target.value)} placeholder="Length" type="number" className="w-full p-3 border rounded-lg pr-10" />
+                    <input required min="1" value={values.length} onChange={e => { setters.setLength(e.target.value); validateField('length', e.target.value); }} onBlur={e => validateField('length', e.target.value)} placeholder="Length" type="number" className="w-full p-3 border rounded-lg pr-10" />
                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">in</span>
+                    {errors.length && <p className="text-sm text-red-600">{errors.length}</p>}
                 </div>
                 <div className="relative">
-                    <input required min="1" value={values.width} onChange={e => setters.setWidth(e.target.value)} placeholder="Width" type="number" className="w-full p-3 border rounded-lg pr-10" />
+                    <input required min="1" value={values.width} onChange={e => { setters.setWidth(e.target.value); validateField('width', e.target.value); }} onBlur={e => validateField('width', e.target.value)} placeholder="Width" type="number" className="w-full p-3 border rounded-lg pr-10" />
                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">in</span>
+                    {errors.width && <p className="text-sm text-red-600">{errors.width}</p>}
                 </div>
                 <div className="relative">
-                    <input required min="1" value={values.height} onChange={e => setters.setHeight(e.target.value)} placeholder="Height" type="number" className="w-full p-3 border rounded-lg pr-10" />
+                    <input required min="1" value={values.height} onChange={e => { setters.setHeight(e.target.value); validateField('height', e.target.value); }} onBlur={e => validateField('height', e.target.value)} placeholder="Height" type="number" className="w-full p-3 border rounded-lg pr-10" />
                     <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">in</span>
+                    {errors.height && <p className="text-sm text-red-600">{errors.height}</p>}
                 </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6">
@@ -476,14 +518,20 @@ const PackageForm = ({ values, setters, onOptionChange }) => {
                     <img src="Fedex-logo.png"/>
                     <span className="text-base font-medium text-gray-700">{carrierDetailsMap.fedex.name}</span>
                 </div>
-                <select required value={values.selectedServiceCode} onChange={handleServiceChange} className="w-full p-3 border rounded-lg text-base bg-white sm:col-span-1">
-                    <option value="">Select Service</option>
-                    {carrierDetailsMap.fedex.services.map(s => <option key={s.serviceCode} value={s.serviceCode}>{s.name}</option>)}
-                </select>
-                <select required value={values.packageCode} onChange={handlePackageChange} className="w-full p-3 border rounded-lg text-base bg-white sm:col-span-1">
-                    <option value="">Select Package Type</option>
-                    {availablePackages.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
-                </select>
+                <div>
+                    <select required value={values.selectedServiceCode} onChange={handleServiceChange} onBlur={e => validateField('selectedServiceCode', e.target.value)} className="w-full p-3 border rounded-lg text-base bg-white sm:col-span-1">
+                        <option value="">Select Service</option>
+                        {carrierDetailsMap.fedex.services.map(s => <option key={s.serviceCode} value={s.serviceCode}>{s.name}</option>)}
+                    </select>
+                    {errors.selectedServiceCode && <p className="text-sm text-red-600">{errors.selectedServiceCode}</p>}
+                </div>
+                <div>
+                    <select required value={values.packageCode} onChange={handlePackageChange} onBlur={e => validateField('packageCode', e.target.value)} className="w-full p-3 border rounded-lg text-base bg-white sm:col-span-1">
+                        <option value="">Select Package Type</option>
+                        {availablePackages.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
+                    </select>
+                    {errors.packageCode && <p className="text-sm text-red-600">{errors.packageCode}</p>}
+                </div>
             </div>
         </section>
     );
@@ -633,9 +681,24 @@ const App = () => {
   };
 
   const getShipmentDetails = () => ({
-    originName, originCompany, originStreet1, originStreet2, originCity, originState, originZip,
-    destinationName, destinationCompany, destinationStreet1, destinationStreet2, destinationCity, destinationState, destinationZip,
-    weight, length, width, height,
+    originName,
+    originCompany,
+    originStreet1,
+    originStreet2,
+    originCity,
+    originState,
+    originZip: parseInt(originZip, 10),
+    destinationName,
+    destinationCompany,
+    destinationStreet1,
+    destinationStreet2,
+    destinationCity,
+    destinationState,
+    destinationZip: parseInt(destinationZip, 10),
+    weight: parseFloat(weight),
+    length: parseFloat(length),
+    width: parseFloat(width),
+    height: parseFloat(height),
     carrierCode: selectedCarrierCode,
     carrierId: selectedCarrierId,
     serviceCode: selectedServiceCode,
@@ -653,17 +716,21 @@ const App = () => {
         throw new Error("Login required");
     }
 
-    const response = await fetch(`${BACKEND_BASE_URL}/${endpoint}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(details),
-    });
-    
-    let result;
-    try { result = await response.json(); } catch (e) { throw new Error("Server response was not valid JSON."); }
-    if (!response.ok) throw new Error(result.error || `Failed to ${endpoint}.`);
-    
-    return result;
+    try {
+        const response = await fetch(`${BACKEND_BASE_URL}/${endpoint}`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(details),
+        });
+
+        let result;
+        try { result = await response.json(); } catch (e) { throw new Error("Server response was not valid JSON."); }
+        if (!response.ok) throw new Error(result.error || `Failed to ${endpoint}.`);
+
+        return result;
+    } catch (error) {
+        throw new Error(error.message || 'Network error.');
+    }
   };
 
   const handleCalculateShipping = async () => {
@@ -673,7 +740,7 @@ const App = () => {
         const result = await handleApiRequest('calculate-shipping', getShipmentDetails(), false);
         setShippingCost(result.shippingCost);
     } catch (err) {
-        setWarning(err.message);
+        setError(err.message);
     } finally {
         setLoading(false);
     }
