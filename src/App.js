@@ -290,11 +290,45 @@ const AdminDashboard = ({ userToken }) => {
     }, [fetchData]);
 
     const handleSaveSettings = async () => {
-        alert('Saving settings...');
+        setError('');
+        setSuccess('');
+        try {
+            const res = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${userToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(settings)
+            });
+            if (!res.ok) throw new Error('Failed to save settings.');
+            const data = await res.json();
+            setSettings(data);
+            setSuccess('Settings saved successfully.');
+        } catch (err) {
+            setError(err.message);
+        }
     };
 
     const handleRoleChange = async (userId, newRole) => {
-        alert(`Changing user ${userId} to ${newRole}`);
+        setError('');
+        setSuccess('');
+        try {
+            const res = await fetch(`${BACKEND_BASE_URL}/admin/users/${userId}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${userToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ role: newRole })
+            });
+            if (!res.ok) throw new Error('Failed to update user role.');
+            const updatedUser = await res.json();
+            setUsers(prev => prev.map(u => u.uid === userId ? { ...u, role: updatedUser.role } : u));
+            setSuccess('User role updated successfully.');
+        } catch (err) {
+            setError(err.message);
+        }
     };
 
     if (loading) {
