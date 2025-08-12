@@ -1,4 +1,8 @@
 const http = require('http');
+const crypto = require('crypto');
+
+// Simple JWT verification using HMAC SHA256
+const JWT_SECRET = process.env.JWT_SECRET || 'change_this_secret';
 
 let settings = { service_fee_b2c: 0, service_fee_b2b: 0 };
 let users = [
@@ -21,15 +25,27 @@ function parseBody(req) {
   });
 }
 
+function verifyJWT(token) {
+  try {
+    const [headerB64, payloadB64, signatureB64] = token.split('.');
+    if (!headerB64 || !payloadB64 || !signatureB64) return null;
+    const expectedSig = crypto
+      .createHmac('sha256', JWT_SECRET)
+      .update(`${headerB64}.${payloadB64}`)
+      .digest('base64url');
+    if (expectedSig !== signatureB64) return null;
+    const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString());
+    return payload;
+  } catch (err) {
+    return null;
+  }
+}
+
 function authenticate(req) {
   const authHeader = req.headers['authorization'] || '';
   const token = authHeader.split(' ')[1];
   if (!token) return null;
-  try {
-    return JSON.parse(Buffer.from(token, 'base64').toString());
-  } catch (err) {
-    return null;
-  }
+  return verifyJWT(token);
 }
 
 const server = http.createServer(async (req, res) => {
