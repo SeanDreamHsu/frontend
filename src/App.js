@@ -20,7 +20,10 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // --- Configuration & Constants ---
-const BACKEND_BASE_URL = 'https://shipping-backend-h9ao.onrender.com/api';
+// Allow overriding the backend URL via environment variable so deployments and local
+// development can point to different backends without code changes.
+const BACKEND_BASE_URL =
+    process.env.REACT_APP_BACKEND_BASE_URL || 'https://shipping-backend-h9ao.onrender.com/api';
 
 const carrierDetailsMap = {
   "fedex": {
@@ -262,24 +265,41 @@ const AdminDashboard = ({ userToken }) => {
     const [success, setSuccess] = useState('');
 
     const fetchData = useCallback(async () => {
+        // Ensure the admin is authenticated before making any requests.
+        if (!userToken) {
+            setError('Please log in to access the admin dashboard.');
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         setError('');
         try {
             const settingsRes = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
                 headers: { 'Authorization': `Bearer ${userToken}` }
             });
-            if (!settingsRes.ok) throw new Error('Failed to fetch settings.');
+            if (!settingsRes.ok) {
+                const message = await settingsRes.text();
+                throw new Error(`Settings request failed (${settingsRes.status}): ${message}`);
+            }
             const settingsData = await settingsRes.json();
             setSettings(settingsData);
 
             const usersRes = await fetch(`${BACKEND_BASE_URL}/admin/users`, {
                 headers: { 'Authorization': `Bearer ${userToken}` }
             });
-            if (!usersRes.ok) throw new Error('Failed to fetch users.');
+            if (!usersRes.ok) {
+                const message = await usersRes.text();
+                throw new Error(`Users request failed (${usersRes.status}): ${message}`);
+            }
             const usersData = await usersRes.json();
             setUsers(usersData);
         } catch (err) {
-            setError(err.message);
+            if (err.name === 'TypeError') {
+                // Network errors (e.g., backend unreachable) result in a TypeError
+                setError('Unable to reach the server. Please try again later.');
+            } else {
+                setError(err.message);
+            }
         } finally {
             setLoading(false);
         }
