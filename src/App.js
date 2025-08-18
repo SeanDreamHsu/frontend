@@ -187,7 +187,7 @@ const Alert = ({ type, message }) => {
         <div className={`${bg} border-l-4 ${border} ${text} p-4 rounded-md`} role="alert">
             <div className="flex">
                 <div className="py-1"><Icon className="h-5 w-5 mr-3" /></div>
-                <div><p>{message}</p></div>
+                <div><p className="whitespace-pre-wrap">{message}</p></div>
             </div>
         </div>
     );
@@ -268,17 +268,24 @@ const AdminDashboard = ({ userToken }) => {
             const settingsRes = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
                 headers: { 'Authorization': `Bearer ${userToken}` }
             });
-            if (!settingsRes.ok) throw new Error('Failed to fetch settings.');
+            if (!settingsRes.ok) {
+                const body = await settingsRes.text();
+                throw new Error(`Settings request failed: ${settingsRes.status} ${settingsRes.statusText} - ${body}`);
+            }
             const settingsData = await settingsRes.json();
             setSettings(settingsData);
 
             const usersRes = await fetch(`${BACKEND_BASE_URL}/admin/users`, {
                 headers: { 'Authorization': `Bearer ${userToken}` }
             });
-            if (!usersRes.ok) throw new Error('Failed to fetch users.');
+            if (!usersRes.ok) {
+                const body = await usersRes.text();
+                throw new Error(`Users request failed: ${usersRes.status} ${usersRes.statusText} - ${body}`);
+            }
             const usersData = await usersRes.json();
             setUsers(usersData);
         } catch (err) {
+            console.error(err);
             setError(err.message);
         } finally {
             setLoading(false);
