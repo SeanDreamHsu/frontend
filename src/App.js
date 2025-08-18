@@ -20,7 +20,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // --- Configuration & Constants ---
-const BACKEND_BASE_URL = 'https://shipping-backend-h9ao.onrender.com/api';
+const BACKEND_BASE_URL = '/api';
 
 const carrierDetailsMap = {
   "fedex": {
@@ -578,6 +578,16 @@ const App = () => {
   const [showLogin, setShowLogin] = useState(false);
   const [currentView, setCurrentView] = useState('shipping');
 
+  useEffect(() => {
+    const handlePopState = () => {
+      const path = window.location.pathname;
+      setCurrentView(path.startsWith('/admin') ? 'admin' : 'shipping');
+    };
+    handlePopState();
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   // Form State
   const [step, setStep] = useState(1);
   const [originName, setOriginName] = useState('');
@@ -640,6 +650,9 @@ const App = () => {
   useEffect(() => {
     if (currentView === 'admin' && userRole !== 'admin') {
       setCurrentView('shipping');
+      if (window.location.pathname !== '/') {
+        window.history.replaceState(null, '', '/');
+      }
     }
   }, [currentView, userRole]);
 
@@ -750,7 +763,14 @@ const App = () => {
                     {userToken ? (
                         <>
                            {userRole === 'admin' && (
-                                <button onClick={() => setCurrentView(currentView === 'admin' ? 'shipping' : 'admin')} className="ml-4 p-2 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 flex items-center">
+                                <button
+                                    onClick={() => {
+                                        const nextView = currentView === 'admin' ? 'shipping' : 'admin';
+                                        window.history.pushState(null, '', nextView === 'admin' ? '/admin' : '/');
+                                        setCurrentView(nextView);
+                                    }}
+                                    className="ml-4 p-2 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 flex items-center"
+                                >
                                     <Settings className="h-5 w-5 mr-2" />
                                     {currentView === 'admin' ? 'Go to App' : 'Dashboard'}
                                 </button>
