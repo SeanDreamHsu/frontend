@@ -20,7 +20,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // --- Configuration & Constants ---
-const BACKEND_BASE_URL = 'https://shipping-backend-h9ao.onrender.com/api';
+const BACKEND_BASE_URL = 'https://backend-23qh.onrender.com/api';
 
 const carrierDetailsMap = {
   "fedex": {
