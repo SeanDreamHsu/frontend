@@ -480,7 +480,7 @@ const PackageForm = ({ values, setters, onOptionChange }) => {
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6">
                 <div className="flex items-center bg-white p-3 border rounded-lg sm:col-span-1">
-                    <img src="Fedex-logo.png"/>
+                    <img src="/Fedex-logo.png"/>
                     <span className="text-base font-medium text-gray-700">{carrierDetailsMap.fedex.name}</span>
                 </div>
                 <select required value={values.selectedServiceCode} onChange={handleServiceChange} className="w-full p-3 border rounded-lg text-base bg-white sm:col-span-1">
@@ -741,7 +741,7 @@ const App = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-20">
                 <div className="flex-shrink-0">
-                     <img src="https://placehold.co/200x80/FFFFFF/4A5568?text=Your+Logo" alt="Company Logo" className="h-12 w-auto object-contain"/>
+                     <img src="/logo.png" alt="Company Logo" className="h-12 w-auto object-contain"/>
                 </div>
                 <div className="flex items-center">
                     <h1 className="text-2xl lg:text-3xl font-bold text-white hidden sm:block">
