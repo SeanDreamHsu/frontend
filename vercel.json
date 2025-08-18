@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://shipping-backend-h9ao.onrender.com/api/:path*" }
+  ]
+}
