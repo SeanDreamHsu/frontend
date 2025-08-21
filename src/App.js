@@ -297,11 +297,55 @@ const AdminDashboard = ({ userToken }) => {
     }, [fetchData]);
 
     const handleSaveSettings = async () => {
-        alert('Saving settings...');
+        setError('');
+        setSuccess('');
+        try {
+            const res = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${userToken}`
+                },
+                body: JSON.stringify(settings)
+            });
+            if (res.ok) {
+                setSuccess('Settings saved successfully.');
+            } else if (res.status === 401 || res.status === 403) {
+                setError('You do not have permission to update settings.');
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setError(data.message || 'Failed to save settings.');
+            }
+        } catch (err) {
+            setError('Network error occurred while saving settings.');
+        }
     };
 
     const handleRoleChange = async (userId, newRole) => {
-        alert(`Changing user ${userId} to ${newRole}`);
+        setError('');
+        setSuccess('');
+        try {
+            const res = await fetch(`${BACKEND_BASE_URL}/admin/users/${userId}/role`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${userToken}`
+                },
+                body: JSON.stringify({ role: newRole })
+            });
+            if (res.ok) {
+                const updatedUser = await res.json().catch(() => ({ uid: userId, role: newRole }));
+                setUsers(prev => prev.map(u => u.uid === userId ? { ...u, ...updatedUser } : u));
+                setSuccess('User role updated successfully.');
+            } else if (res.status === 401 || res.status === 403) {
+                setError('You do not have permission to change user roles.');
+            } else {
+                const data = await res.json().catch(() => ({}));
+                setError(data.message || 'Failed to change user role.');
+            }
+        } catch (err) {
+            setError('Network error occurred while changing user role.');
+        }
     };
 
     if (loading) {
