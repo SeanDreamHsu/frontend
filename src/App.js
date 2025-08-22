@@ -265,27 +265,32 @@ const AdminDashboard = ({ userToken }) => {
         setLoading(true);
         setError('');
         try {
+            // 获取设置
             const settingsRes = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
                 headers: { 'Authorization': `Bearer ${userToken}` }
             });
             if (!settingsRes.ok) {
-                const body = await settingsRes.text();
-                throw new Error(`Settings request failed: ${settingsRes.status} ${settingsRes.statusText} - ${body}`);
+                const errorData = await settingsRes.json();
+                throw new Error(`Settings request failed: ${settingsRes.status} - ${errorData.error || settingsRes.statusText}`);
             }
             const settingsData = await settingsRes.json();
             setSettings(settingsData);
 
+            // 获取用户列表
             const usersRes = await fetch(`${BACKEND_BASE_URL}/admin/users`, {
                 headers: { 'Authorization': `Bearer ${userToken}` }
             });
             if (!usersRes.ok) {
-                const body = await usersRes.text();
-                throw new Error(`Users request failed: ${usersRes.status} ${usersRes.statusText} - ${body}`);
+                const errorData = await usersRes.json();
+                throw new Error(`Users request failed: ${usersRes.status} - ${errorData.error || usersRes.statusText}`);
             }
             const usersData = await usersRes.json();
-            setUsers(usersData);
+            
+            // 后端返回 {"users": [...]}，所以需要提取users数组
+            setUsers(usersData.users || []);
+            
         } catch (err) {
-            console.error(err);
+            console.error('Fetch data error:', err);
             setError(err.message);
         } finally {
             setLoading(false);
@@ -297,11 +302,65 @@ const AdminDashboard = ({ userToken }) => {
     }, [fetchData]);
 
     const handleSaveSettings = async () => {
-        alert('Saving settings...');
+        try {
+            setSuccess('');
+            setError('');
+            
+            // 这里需要调用保存设置的API（如果后端有的话）
+            const response = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
+                method: 'PUT', // 或 POST，取决于后端实现
+                headers: {
+                    'Authorization': `Bearer ${userToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    service_fee_b2c: parseFloat(settings.service_fee_b2c),
+                    service_fee_b2b: parseFloat(settings.service_fee_b2b)
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to save settings');
+            }
+            
+            setSuccess('Settings saved successfully!');
+        } catch (err) {
+            setError(`Failed to save settings: ${err.message}`);
+        }
     };
 
     const handleRoleChange = async (userId, newRole) => {
-        alert(`Changing user ${userId} to ${newRole}`);
+        try {
+            setError('');
+            setSuccess('');
+            
+            // 调用更新用户角色的API（需要在后端实现）
+            const response = await fetch(`${BACKEND_BASE_URL}/admin/users/${userId}/role`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${userToken}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ role: newRole })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Failed to update user role');
+            }
+            
+            // 更新本地状态
+            setUsers(prevUsers => 
+                prevUsers.map(user => 
+                    user.uid === userId ? { ...user, role: newRole } : user
+                )
+            );
+            
+            setSuccess(`User role updated to ${newRole} successfully!`);
+        } catch (err) {
+            setError(`Failed to update user role: ${err.message}`);
+        }
     };
 
     if (loading) {
@@ -319,46 +378,81 @@ const AdminDashboard = ({ userToken }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
                         <label htmlFor="b2c_fee" className="block text-sm font-medium text-gray-700">B2C Service Fee ($)</label>
-                        <input type="number" step="0.01" id="b2c_fee" value={settings.service_fee_b2c} onChange={e => setSettings({...settings, service_fee_b2c: e.target.value})} className="w-full mt-1 p-3 border rounded-lg" />
+                        <input 
+                            type="number" 
+                            step="0.01" 
+                            id="b2c_fee" 
+                            value={settings.service_fee_b2c} 
+                            onChange={e => setSettings({...settings, service_fee_b2c: e.target.value})} 
+                            className="w-full mt-1 p-3 border rounded-lg" 
+                        />
                     </div>
                     <div>
                         <label htmlFor="b2b_fee" className="block text-sm font-medium text-gray-700">B2B Service Fee ($)</label>
-                        <input type="number" step="0.01" id="b2b_fee" value={settings.service_fee_b2b} onChange={e => setSettings({...settings, service_fee_b2b: e.target.value})} className="w-full mt-1 p-3 border rounded-lg" />
+                        <input 
+                            type="number" 
+                            step="0.01" 
+                            id="b2b_fee" 
+                            value={settings.service_fee_b2b} 
+                            onChange={e => setSettings({...settings, service_fee_b2b: e.target.value})} 
+                            className="w-full mt-1 p-3 border rounded-lg" 
+                        />
                     </div>
                 </div>
                 <div className="mt-6 text-right">
-                    <button onClick={handleSaveSettings} className="py-2 px-6 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700">Save Settings</button>
+                    <button 
+                        onClick={handleSaveSettings} 
+                        className="py-2 px-6 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                        Save Settings
+                    </button>
                 </div>
             </section>
 
             <section className="p-6 bg-gray-50 rounded-xl border">
-                 <h3 className="text-xl font-semibold mb-4">User Management</h3>
-                 <div className="overflow-x-auto">
-                     <table className="min-w-full divide-y divide-gray-200">
-                         <thead className="bg-gray-100">
-                             <tr>
-                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                             </tr>
-                         </thead>
-                         <tbody className="bg-white divide-y divide-gray-200">
-                             {users.map(user => (
-                                 <tr key={user.uid}>
-                                     <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
-                                     <td className="px-6 py-4 whitespace-nowrap">{user.role}</td>
-                                     <td className="px-6 py-4 whitespace-nowrap">
-                                         <select onChange={(e) => handleRoleChange(user.uid, e.target.value)} defaultValue={user.role} className="p-2 border rounded-lg">
-                                             <option value="b2c">B2C</option>
-                                             <option value="b2b">B2B</option>
-                                             <option value="admin">Admin</option>
-                                         </select>
-                                     </td>
-                                 </tr>
-                             ))}
-                         </tbody>
-                     </table>
-                 </div>
+                <h3 className="text-xl font-semibold mb-4">User Management</h3>
+                {users.length === 0 ? (
+                    <p className="text-gray-500">No users found.</p>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                            <thead className="bg-gray-100">
+                                <tr>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody className="bg-white divide-y divide-gray-200">
+                                {users.map(user => (
+                                    <tr key={user.uid}>
+                                        <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className={`px-2 py-1 text-xs rounded-full ${
+                                                user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                                                user.role === 'b2b' ? 'bg-blue-100 text-blue-800' :
+                                                'bg-green-100 text-green-800'
+                                            }`}>
+                                                {user.role.toUpperCase()}
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <select 
+                                                onChange={(e) => handleRoleChange(user.uid, e.target.value)} 
+                                                defaultValue={user.role} 
+                                                className="p-2 border rounded-lg"
+                                            >
+                                                <option value="b2c">B2C</option>
+                                                <option value="b2b">B2B</option>
+                                                <option value="admin">Admin</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </section>
         </div>
     );
@@ -616,23 +710,45 @@ const App = () => {
   const [orderSendSuccess, setOrderSendSuccess] = useState('');
   
   // Authentication Listener
-  useEffect(() => {
+ useEffect(() => {
     if (process.env.NODE_ENV === 'test') {
       setAuthLoading(false);
       return;
     }
+    
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const idTokenResult = await user.getIdTokenResult();
-        setUserToken(idTokenResult.token);
-        setUserRole(idTokenResult.claims.role || 'b2c');
-        setShowLogin(false);
+        try {
+          // 获取Firebase token
+          const idTokenResult = await user.getIdTokenResult();
+          setUserToken(idTokenResult.token);
+          
+          // 调用后端API获取用户角色
+          const response = await fetch(`${BACKEND_BASE_URL}/user/profile`, {
+            headers: { 'Authorization': `Bearer ${idTokenResult.token}` }
+          });
+          
+          if (response.ok) {
+            const userData = await response.json();
+            setUserRole(userData.role || 'b2c');
+          } else {
+            // 如果API调用失败，使用默认角色
+            console.warn('Failed to fetch user profile, using default role');
+            setUserRole('b2c');
+          }
+          
+          setShowLogin(false);
+        } catch (error) {
+          console.error('Error fetching user data:', error);
+          setUserRole('b2c'); // 默认角色
+        }
       } else {
         setUserToken(null);
         setUserRole(null);
       }
       setAuthLoading(false);
     });
+    
     return () => unsubscribe && unsubscribe();
   }, []);
 
@@ -683,30 +799,39 @@ const App = () => {
 
   const handleCalculateShipping = async () => {
     setLoading(true);
-    setError(''); setWarning('');
+    setError(''); 
+    setWarning('');
+    
     try {
-        const result = await handleApiRequest('calculate-shipping', getShipmentDetails(), false);
-        setShippingCost(result.shippingCost);
+        // 构造后端期望的数据格式
+        const shippingData = {
+            weight: parseFloat(weight),
+            origin_zip: originZip,
+            destination_zip: destinationZip
+        };
+        
+        const response = await fetch(`${BACKEND_BASE_URL}/calculate-shipping`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(shippingData)
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `HTTP ${response.status}`);
+        }
+        
+        const result = await response.json();
+        // 后端返回 {cost: number, currency: string}
+        setShippingCost(result.cost);
+        
     } catch (err) {
-        setWarning(err.message);
+        console.error('Shipping calculation error:', err);
+        setError(`Failed to calculate shipping: ${err.message}`);
     } finally {
         setLoading(false);
-    }
-  };
-
-  const handleCreateOrder = async () => {
-    setOrderSending(true);
-    setError(''); setWarning('');
-    try {
-        const result = await handleApiRequest('create-shipstation-order', getShipmentDetails(), true);
-        setOrderSendSuccess(`Order created successfully! Order Number: ${result.orderNumber}`);
-        setShippingCost(null);
-    } catch (err) {
-        if (err.message !== "Login required") {
-            setError(err.message);
-        }
-    } finally {
-        setOrderSending(false);
     }
   };
 
