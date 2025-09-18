@@ -297,7 +297,34 @@ const AdminDashboard = ({ userToken }) => {
     }, [fetchData]);
 
     const handleSaveSettings = async () => {
-        alert('Saving settings...');
+        setError('');
+        setSuccess('');
+
+        try {
+            const response = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${userToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    service_fee_b2c: parseFloat(settings.service_fee_b2c) || 0,
+                    service_fee_b2b: parseFloat(settings.service_fee_b2b) || 0,
+                }),
+            });
+
+            if (!response.ok) {
+                const body = await response.text();
+                throw new Error(`Failed to save settings: ${response.status} ${response.statusText} - ${body}`);
+            }
+
+            const updatedSettings = await response.json();
+            setSettings(updatedSettings);
+            setSuccess('Settings saved successfully.');
+        } catch (err) {
+            console.error(err);
+            setError(err.message);
+        }
     };
 
     const handleRoleChange = async (userId, newRole) => {
@@ -612,6 +639,9 @@ const App = () => {
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
   const [shippingCost, setShippingCost] = useState(null);
+  const [baseShippingCost, setBaseShippingCost] = useState(null);
+  const [serviceFee, setServiceFee] = useState(3);
+  const [appliedServiceFee, setAppliedServiceFee] = useState(0);
   const [orderSending, setOrderSending] = useState(false);
   const [orderSendSuccess, setOrderSendSuccess] = useState('');
   
@@ -657,6 +687,8 @@ const App = () => {
     packageCode: packageCode,
     isResidential,
     shippingCost,
+    baseShippingCost,
+    serviceFee: appliedServiceFee,
   });
 
   const handleApiRequest = async (endpoint, details, requireAuth = false) => {
@@ -681,12 +713,53 @@ const App = () => {
     return result;
   };
 
+  const fetchServiceFee = useCallback(async (role) => {
+    if (process.env.NODE_ENV === 'test') return;
+
+    try {
+        const response = await fetch(`${BACKEND_BASE_URL}/settings/service-fee?role=${role}`);
+        if (!response.ok) {
+            throw new Error(`Failed to fetch service fee: ${response.status}`);
+        }
+
+        let data;
+        try {
+            data = await response.json();
+        } catch (err) {
+            throw new Error('Service fee response was not valid JSON.');
+        }
+
+        if (typeof data.serviceFee === 'number') {
+            setServiceFee(data.serviceFee);
+        }
+    } catch (err) {
+        console.error('Error fetching service fee', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (process.env.NODE_ENV === 'test') return;
+
+    const role = userRole || 'b2c';
+    fetchServiceFee(role);
+  }, [fetchServiceFee, userRole]);
+
   const handleCalculateShipping = async () => {
     setLoading(true);
     setError(''); setWarning('');
     try {
         const result = await handleApiRequest('calculate-shipping', getShipmentDetails(), false);
-        setShippingCost(result.shippingCost);
+        const apiBaseCost = Number(result.baseShippingCost ?? result.shippingCost ?? 0);
+        const apiServiceFee = Number(result.serviceFee ?? result.service_fee ?? result.additionalFee ?? Number.NaN);
+
+        const effectiveServiceFee = Number.isFinite(apiServiceFee)
+            ? apiServiceFee
+            : (typeof serviceFee === 'number' ? serviceFee : parseFloat(serviceFee) || 0);
+        const totalCost = apiBaseCost + (effectiveServiceFee || 0);
+
+        setBaseShippingCost(apiBaseCost);
+        setAppliedServiceFee(effectiveServiceFee);
+        setShippingCost(totalCost);
     } catch (err) {
         setWarning(err.message);
     } finally {
@@ -701,6 +774,8 @@ const App = () => {
         const result = await handleApiRequest('create-shipstation-order', getShipmentDetails(), true);
         setOrderSendSuccess(`Order created successfully! Order Number: ${result.orderNumber}`);
         setShippingCost(null);
+        setBaseShippingCost(null);
+        setAppliedServiceFee(0);
     } catch (err) {
         if (err.message !== "Login required") {
             setError(err.message);
@@ -719,12 +794,16 @@ const App = () => {
     setDestinationName(''); setDestinationCompany(''); setDestinationStreet1(''); setDestinationStreet2(''); setDestinationCity(''); setDestinationState(''); setDestinationZip('');
     setWeight(''); setLength(''); setWidth(''); setHeight('');
     setShippingCost(null);
+    setBaseShippingCost(null);
+    setAppliedServiceFee(0);
     setOrderSendSuccess('');
     setStep(1);
   };
 
   const handleOptionChange = () => {
     setShippingCost(null);
+    setBaseShippingCost(null);
+    setAppliedServiceFee(0);
     setOrderSendSuccess('');
   };
 
@@ -829,17 +908,21 @@ const App = () => {
                                         <Alert type="error" message={error} />
                                         <Alert type="success" message={orderSendSuccess} />
                                         
-                                        {!shippingCost && !orderSendSuccess && (
+                                        {shippingCost === null && !orderSendSuccess && (
                                              <button onClick={handleCalculateShipping} disabled={loading} className="w-full py-4 px-6 rounded-lg font-bold text-white bg-blue-600 hover:bg-blue-700 flex items-center justify-center text-lg active:scale-95 transition-transform">
                                                 {loading ? <><Loader2 className="animate-spin mr-3" size={24} />Calculating...</> : <><DollarSign className="mr-3" size={24} />Calculate Shipping</>}
                                             </button>
                                         )}
 
-                                        {shippingCost && !orderSendSuccess && (
+                                        {shippingCost !== null && !orderSendSuccess && (
                                             <div className="text-center p-6 bg-green-50 rounded-xl border border-green-200">
                                                 <h2 className="text-2xl font-bold text-green-700 mb-3">Total Estimated Cost</h2>
                                                 <p className="text-5xl font-extrabold text-green-800">${shippingCost.toFixed(2)}</p>
-                                                
+                                                <div className="mt-4 text-green-700 space-y-1">
+                                                    <p>Base Rate: ${baseShippingCost !== null ? baseShippingCost.toFixed(2) : '0.00'}</p>
+                                                    <p>Service Fee: ${appliedServiceFee ? appliedServiceFee.toFixed(2) : '0.00'}</p>
+                                                </div>
+
                                                 {userToken ? (
                                                     <button onClick={handleCreateOrder} disabled={orderSending} className="mt-6 w-full py-4 px-6 rounded-lg font-bold text-white bg-purple-600 hover:bg-purple-700">
                                                         {orderSending ? 'Creating Order...' : 'Create Shipping Label'}
