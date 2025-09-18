@@ -222,7 +222,7 @@ const LoginPage = ({ show, onClose }) => {
     return (
         <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="w-full max-w-md bg-white/95 p-8 rounded-3xl shadow-xl border border-sky-100 relative">
-                <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-slate-700">
                     <XCircle size={24} />
                 </button>
                 <div className="text-center mb-8">
