@@ -603,7 +603,9 @@ const App = () => {
   const [userRole, setUserRole] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
-  const [currentView, setCurrentView] = useState('shipping');
+  const [currentView, setCurrentView] = useState(() =>
+    window.location.pathname === '/admin' ? 'admin' : 'shipping'
+  );
 
   // Form State
   const [step, setStep] = useState(1);
@@ -644,7 +646,18 @@ const App = () => {
   const [appliedServiceFee, setAppliedServiceFee] = useState(0);
   const [orderSending, setOrderSending] = useState(false);
   const [orderSendSuccess, setOrderSendSuccess] = useState('');
-  
+
+  // Sync view with browser navigation
+  useEffect(() => {
+    const handlePop = () => {
+      setCurrentView(
+        window.location.pathname === '/admin' ? 'admin' : 'shipping'
+      );
+    };
+    window.addEventListener('popstate', handlePop);
+    return () => window.removeEventListener('popstate', handlePop);
+  }, []);
+
   // Authentication Listener
   useEffect(() => {
     if (process.env.NODE_ENV === 'test') {
@@ -669,9 +682,13 @@ const App = () => {
   // Ensure only admins can access the admin dashboard
   useEffect(() => {
     if (currentView === 'admin' && userRole !== 'admin') {
+      window.history.replaceState({}, '', '/');
       setCurrentView('shipping');
+      if (!userToken) {
+        setShowLogin(true);
+      }
     }
-  }, [currentView, userRole]);
+  }, [currentView, userRole, userToken]);
 
   const handleSignOut = () => {
     signOut(auth).catch((error) => console.error("Sign out error", error));
@@ -807,6 +824,15 @@ const App = () => {
     setOrderSendSuccess('');
   };
 
+  const navigateView = (view) => {
+    if (view === 'admin') {
+      window.history.pushState({}, '', '/admin');
+    } else {
+      window.history.pushState({}, '', '/');
+    }
+    setCurrentView(view);
+  };
+
 
   if (authLoading) {
     return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin h-12 w-12 text-blue-600" /></div>;
@@ -829,7 +855,7 @@ const App = () => {
                     {userToken ? (
                         <>
                            {userRole === 'admin' && (
-                                <button onClick={() => setCurrentView(currentView === 'admin' ? 'shipping' : 'admin')} className="ml-4 p-2 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 flex items-center">
+                                <button onClick={() => navigateView(currentView === 'admin' ? 'shipping' : 'admin')} className="ml-4 p-2 rounded-lg text-white font-semibold bg-blue-600 hover:bg-blue-700 flex items-center">
                                     <Settings className="h-5 w-5 mr-2" />
                                     {currentView === 'admin' ? 'Go to App' : 'Dashboard'}
                                 </button>
