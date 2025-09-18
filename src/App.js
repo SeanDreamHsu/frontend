@@ -553,7 +553,7 @@ const Stepper = ({ currentStep, steps }) => (
             <div className="flex items-center">
                 {steps.map((step, stepIdx) => (
                     <li key={step.name} className={`flex-1 ${stepIdx !== steps.length - 1 ? 'pr-8 sm:pr-20' : ''}`}>
-                        <div className={`text-center text-sm font-medium ${stepIdx <= currentStep ? 'text-sky-600' : 'text-slate-400'}`}>
+                        <div className={`text-center text-sm font-medium ${stepIdx <= currentStep ? 'text-sky-800' : 'text-slate-600'}`}>
                             {step.name}
                         </div>
                     </li>
