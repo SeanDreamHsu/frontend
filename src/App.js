@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
 import { Package, MapPin, DollarSign, Loader2, Send, AlertTriangle, CheckCircle, XCircle, ArrowLeft, ArrowRight, LogOut, LogIn, Settings } from 'lucide-react';
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
@@ -599,7 +599,7 @@ const Stepper = ({ currentStep, steps }) => (
 
 // --- Route Guards ---
 const AdminRoute = ({ userRole, userToken, children }) => {
-  if (!userToken || userRole !== 'admin') {
+if (!userToken || userRole !== 'admin') {
     return <Navigate to="/" replace />;
   }
 
@@ -654,12 +654,12 @@ const App = () => {
   const [orderSending, setOrderSending] = useState(false);
   const [orderSendSuccess, setOrderSendSuccess] = useState('');
 
-  const navigate = useNavigate();
-  const location = useLocation();
-  const isAdminRoute = location.pathname.startsWith('/admin');
-  const handleAdminNavigation = () => {
-    navigate(isAdminRoute ? '/' : '/admin');
-  };
+const navigate = useNavigate();
+const location = useLocation();
+const isAdminRoute = location.pathname.startsWith('/admin');
+const handleAdminNavigation = () => {
+navigate(isAdminRoute ? '/' : '/admin');
+};
   
   // Authentication Listener
   useEffect(() => {
@@ -844,10 +844,10 @@ const App = () => {
                     {userToken ? (
                         <>
                            {userRole === 'admin' && (
-                                <button onClick={handleAdminNavigation} className="ml-4 py-2 px-4 rounded-full text-white font-semibold bg-sky-500 hover:bg-sky-400 flex items-center shadow-sm">
-                                    <Settings className="h-5 w-5 mr-2" />
-                                    {isAdminRoute ? 'Go to App' : 'Dashboard'}
-                                </button>
+<button onClick={handleAdminNavigation} className="ml-4 py-2 px-4 rounded-full text-white font-semibold bg-sky-500 hover:bg-sky-400 flex items-center shadow-sm">
+  <Settings className="h-5 w-5 mr-2" />
+  {isAdminRoute ? 'Go to App' : 'Dashboard'}
+</button>
                            )}
                             <button onClick={handleSignOut} className="ml-4 p-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
                                 <LogOut className="h-6 w-6" />
@@ -930,19 +930,19 @@ const App = () => {
                               </button>
                             )}
 
-                            {shippingCost !== null && !orderSendSuccess && (
-                              <div className="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm">
-                                <h2 className="text-2xl font-bold text-emerald-700 mb-3">Total Estimated Cost</h2>
-                                <p className="text-5xl font-extrabold text-emerald-800">${shippingCost.toFixed(2)}</p>
-                                <div className="mt-4 text-emerald-700 space-y-1">
-                                  <p>Base Rate: ${baseShippingCost?.toFixed(2) ?? '—'}</p>
-                                  <p>Service Fee: ${appliedServiceFee.toFixed(2)}</p>
-                                </div>
-                                <button onClick={handleCreateOrder} disabled={orderSending} className="mt-6 w-full py-4 px-6 rounded-full font-semibold text-white bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm disabled:bg-slate-300 disabled:text-slate-500">
-                                  {orderSending ? <><Loader2 className="animate-spin mr-3" size={24} />Processing...</> : <><Send className="mr-3" size={24} />Create Shipping Label</>}
-                                </button>
-                              </div>
-                            )}
+{shippingCost !== null && !orderSendSuccess && (
+<div className="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm">
+<h2 className="text-2xl font-bold text-emerald-700 mb-3">Total Estimated Cost</h2>
+<p className="text-5xl font-extrabold text-emerald-800">${ shippingCost . toFixed ( 2 ) }</p>
+<div className="mt-4 text-emerald-700 space-y-1">
+<p>Base Rate: ${ baseShippingCost ?. toFixed ( 2 ) ?? '—' }</p>
+<p>Service Fee: ${ appliedServiceFee . toFixed ( 2 ) }</p>
+</div>
+<button onClick={handleCreateOrder} disabled={orderSending} className="mt-6 w-full py-4 px-6 rounded-full font-semibold text-white bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm disabled:bg-slate-300 disabled:text-slate-500">
+{orderSending ? <><Loader2 className="animate-spin mr-3" size={24} />Processing...</> : <><Send className="mr-3" size={24} />Create Shipping Label</>}
+</button>
+</div>
+)}
 
                             {orderSendSuccess && (
                               <div className="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm">
