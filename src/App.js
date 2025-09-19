@@ -942,7 +942,7 @@ const App = () => {
                                   <p>Base Rate: ${baseShippingCost?.toFixed(2) ?? '—'}</p>
                                   <p>Service Fee: ${appliedServiceFee.toFixed(2)}</p>
                                 </div>
-                                <button onClick={handleSendOrder} disabled={orderSending} className="mt-6 w-full py-4 px-6 rounded-full font-semibold text-white bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm disabled:bg-slate-300 disabled:text-slate-500">
+                                <button onClick={handleCreateOrder} disabled={orderSending} className="mt-6 w-full py-4 px-6 rounded-full font-semibold text-white bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm disabled:bg-slate-300 disabled:text-slate-500">
                                   {orderSending ? <><Loader2 className="animate-spin mr-3" size={24} />Processing...</> : <><Send className="mr-3" size={24} />Create Shipping Label</>}
                                 </button>
                               </div>
