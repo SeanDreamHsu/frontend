@@ -599,11 +599,7 @@ const Stepper = ({ currentStep, steps }) => (
 
 // --- Route Guards ---
 const AdminRoute = ({ userRole, userToken, children }) => {
-  if (!userToken) {
-    return <Navigate to="/" replace />;
-  }
-
-  if (userRole !== 'admin') {
+  if (!userToken || userRole !== 'admin') {
     return <Navigate to="/" replace />;
   }
 
