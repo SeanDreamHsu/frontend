@@ -16,8 +16,9 @@ You may also see any lint errors in the console.
 
 ### `npm test`
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+Runs the test suite a single time in a non-interactive mode that is suitable for CI environments.\
+This project configures the script to pass `--watchAll=false` to `react-scripts test` automatically, so you no longer
+need to supply the flag manually when running tests locally or in automation.
 
 ### `npm run build`
 
