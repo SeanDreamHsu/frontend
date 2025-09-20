@@ -158,6 +158,27 @@ const debounce = (func, delay) => {
     };
 };
 
+const deriveRoleFromClaims = (claims = {}) => {
+    if (typeof claims.role === 'string' && claims.role.trim()) {
+        return claims.role.trim().toLowerCase();
+    }
+
+    const prioritizedRoles = ['admin', 'b2b', 'b2c'];
+
+    if (Array.isArray(claims.roles) && claims.roles.length) {
+        const normalizedRoles = new Set(claims.roles.map(role => String(role).toLowerCase()));
+        for (const role of prioritizedRoles) {
+            if (normalizedRoles.has(role)) return role;
+        }
+    }
+
+    for (const role of prioritizedRoles) {
+        if (claims[role] === true) return role;
+    }
+
+    return null;
+};
+
 // --- API Calls ---
 const fetchAddressSuggestions = async (query) => {
   try {
@@ -599,7 +620,9 @@ const Stepper = ({ currentStep, steps }) => (
 
 // --- Route Guards ---
 const AdminRoute = ({ userRole, userToken, children }) => {
-if (!userToken || userRole !== 'admin') {
+  const isAdmin = typeof userRole === 'string' && userRole.toLowerCase() === 'admin';
+
+  if (!userToken || !isAdmin) {
     return <Navigate to="/" replace />;
   }
 
@@ -654,12 +677,12 @@ const App = () => {
   const [orderSending, setOrderSending] = useState(false);
   const [orderSendSuccess, setOrderSendSuccess] = useState('');
 
-const navigate = useNavigate();
-const location = useLocation();
-const isAdminRoute = location.pathname.startsWith('/admin');
-const handleAdminNavigation = () => {
-navigate(isAdminRoute ? '/' : '/admin');
-};
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isAdminRoute = location.pathname.startsWith('/admin');
+  const handleAdminNavigation = () => {
+    navigate(isAdminRoute ? '/' : '/admin');
+  };
   
   // Authentication Listener
   useEffect(() => {
@@ -670,8 +693,12 @@ navigate(isAdminRoute ? '/' : '/admin');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const idTokenResult = await user.getIdTokenResult();
+        const claims = idTokenResult?.claims ?? {};
+        const derivedRole = deriveRoleFromClaims(claims);
+        const normalizedRole = derivedRole ? String(derivedRole).toLowerCase() : null;
+
         setUserToken(idTokenResult.token);
-        setUserRole(idTokenResult.claims.role || 'b2c');
+        setUserRole(normalizedRole || 'b2c');
         setShowLogin(false);
       } else {
         setUserToken(null);
