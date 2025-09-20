@@ -831,25 +831,28 @@ navigate(isAdminRoute ? '/' : '/admin');
     <div className="bg-gradient-to-br from-white via-sky-50 to-emerald-50 min-h-screen font-sans text-slate-700">
       <LoginPage show={showLogin} onClose={() => setShowLogin(false)} />
 
-      <nav className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md border-b border-sky-100 shadow-sm z-20">
+      <nav className="fixed top-0 left-0 right-0 bg-sky-900/95 backdrop-blur border-b border-sky-800 shadow-lg z-20 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-20">
                 <div className="flex-shrink-0">
                      <img src="/logo.png" alt="Company Logo" className="h-12 w-auto object-contain"/>
                 </div>
-                <div className="flex items-center">
-                    <h1 className="text-2xl lg:text-3xl font-bold text-slate-700 hidden sm:block">
+                <div className="flex items-center text-white">
+                    <h1 className="text-2xl lg:text-3xl font-bold hidden sm:block">
                         Shipping Label Creator
                     </h1>
                     {userToken ? (
                         <>
                            {userRole === 'admin' && (
-<button onClick={handleAdminNavigation} className="ml-4 py-2 px-4 rounded-full text-white font-semibold bg-sky-500 hover:bg-sky-400 flex items-center shadow-sm">
-  <Settings className="h-5 w-5 mr-2" />
-  {isAdminRoute ? 'Go to App' : 'Dashboard'}
-</button>
+                                <button
+                                    onClick={handleAdminNavigation}
+                                    className="ml-4 py-2 px-4 rounded-full font-semibold bg-sky-500 hover:bg-sky-400 flex items-center shadow-sm"
+                                >
+                                    <Settings className="h-5 w-5 mr-2" />
+                                    {isAdminRoute ? 'Go to App' : 'Dashboard'}
+                                </button>
                            )}
-                            <button onClick={handleSignOut} className="ml-4 p-2 rounded-full text-slate-500 hover:bg-slate-100 transition-colors">
+                            <button onClick={handleSignOut} className="ml-4 p-2 rounded-full text-white/90 hover:bg-white/10 transition-colors">
                                 <LogOut className="h-6 w-6" />
                             </button>
                         </>
