@@ -846,7 +846,7 @@ navigate(isAdminRoute ? '/' : '/admin');
                            {userRole === 'admin' && (
                                 <button
                                     onClick={handleAdminNavigation}
-                                    className="ml-4 py-2 px-4 rounded-full text-white font-semibold bg-sky-500 hover:bg-sky-400 flex items-center shadow-sm"
+                                    className="ml-4 py-2 px-4 rounded-full font-semibold bg-sky-500 hover:bg-sky-400 flex items-center shadow-sm"
                                 >
                                     <Settings className="h-5 w-5 mr-2" />
                                     {isAdminRoute ? 'Go to App' : 'Dashboard'}
