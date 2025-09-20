@@ -160,19 +160,21 @@ const debounce = (func, delay) => {
 
 const deriveRoleFromClaims = (claims = {}) => {
     if (typeof claims.role === 'string' && claims.role.trim()) {
-        return claims.role;
+        return claims.role.trim().toLowerCase();
     }
+
+    const prioritizedRoles = ['admin', 'b2b', 'b2c'];
 
     if (Array.isArray(claims.roles) && claims.roles.length) {
-        const normalizedRoles = claims.roles.map(role => String(role).toLowerCase());
-        if (normalizedRoles.includes('admin')) return 'admin';
-        if (normalizedRoles.includes('b2b')) return 'b2b';
-        if (normalizedRoles.includes('b2c')) return 'b2c';
+        const normalizedRoles = new Set(claims.roles.map(role => String(role).toLowerCase()));
+        for (const role of prioritizedRoles) {
+            if (normalizedRoles.has(role)) return role;
+        }
     }
 
-    if (claims.admin === true) return 'admin';
-    if (claims.b2b === true) return 'b2b';
-    if (claims.b2c === true) return 'b2c';
+    for (const role of prioritizedRoles) {
+        if (claims[role] === true) return role;
+    }
 
     return null;
 };
