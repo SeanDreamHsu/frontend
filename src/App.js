@@ -158,9 +158,12 @@ const debounce = (func, delay) => {
     };
 };
 
-const deriveRoleFromClaims = (claims = {}) => {
-    if (typeof claims.role === 'string' && claims.role.trim()) {
-        return claims.role.trim().toLowerCase();
+export const deriveRoleFromClaims = (claims = {}) => {
+    if (typeof claims.role === 'string') {
+        const trimmedRole = claims.role.trim();
+        if (trimmedRole) {
+            return trimmedRole.toLowerCase();
+        }
     }
 
     const prioritizedRoles = ['admin', 'b2b', 'b2c'];
@@ -619,8 +622,8 @@ const Stepper = ({ currentStep, steps }) => (
 
 
 // --- Route Guards ---
-const AdminRoute = ({ userRole, userToken, children }) => {
-  const isAdmin = typeof userRole === 'string' && userRole.toLowerCase() === 'admin';
+export const AdminRoute = ({ userRole, userToken, children }) => {
+  const isAdmin = typeof userRole === 'string' && userRole.trim().toLowerCase() === 'admin';
 
   if (!userToken || !isAdmin) {
     return <Navigate to="/" replace />;
@@ -695,7 +698,7 @@ const App = () => {
         const idTokenResult = await user.getIdTokenResult();
         const claims = idTokenResult?.claims ?? {};
         const derivedRole = deriveRoleFromClaims(claims);
-        const normalizedRole = derivedRole ? String(derivedRole).toLowerCase() : null;
+        const normalizedRole = derivedRole ? String(derivedRole).trim().toLowerCase() : null;
 
         setUserToken(idTokenResult.token);
         setUserRole(normalizedRole || 'b2c');
@@ -1006,4 +1009,5 @@ const App = () => {
     </div>
   );
 };
+
 export default App;
