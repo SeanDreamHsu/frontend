@@ -838,7 +838,7 @@ navigate(isAdminRoute ? '/' : '/admin');
                      <img src="/logo.png" alt="Company Logo" className="h-12 w-auto object-contain"/>
                 </div>
                 <div className="flex items-center text-white">
-                    <h1 className="text-2xl lg:text-3xl font-bold text-white hidden sm:block">
+                    <h1 className="text-2xl lg:text-3xl font-bold hidden sm:block">
                         Shipping Label Creator
                     </h1>
                     {userToken ? (
