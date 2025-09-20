@@ -1,4 +1,8 @@
 import { render, screen } from '@testing-library/react';
+import * as AppModule from './App';
+
+const App = AppModule.default;
+const { deriveRoleFromClaims, AdminRoute } = AppModule;
 
 jest.mock('firebase/app', () => ({
   __esModule: true,
@@ -17,10 +21,21 @@ jest.mock('firebase/auth', () => ({
   signInWithEmailAndPassword: jest.fn(),
 }));
 
-const App = require('./App').default;
-
 test('renders app title', async () => {
   render(<App />);
   const heading = await screen.findByText(/Shipping Label Creator/i);
   expect(heading).toBeInTheDocument();
+});
+
+test('derives and applies trimmed admin role', () => {
+  const derivedRole = deriveRoleFromClaims({ role: '  Admin ' });
+
+  const routeContent = AdminRoute({
+    userRole: derivedRole,
+    userToken: 'token',
+    children: <div>Admin Area</div>,
+  });
+
+  expect(derivedRole).toBe('admin');
+  expect(routeContent).toEqual(<div>Admin Area</div>);
 });
