@@ -1,71 +1,55 @@
-# Getting Started with Create React App
+# MailPC Label System
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+MailPC Label System 是一个用于简化邮寄标签生成和运费查询的 React 前端项目。此应用提供类似 ShipStation 的轻量级体验，允许用户输入发货/收货信息、包裹详情并生成可下载的运单标签。
 
-## Available Scripts
+## 功能特色
+- 支持分步式表单：Origin、Destination、Package、Review。
+- 提供 FedEx 服务选择与包裹类型对应。
+- 实时地址自动补全（需要后端支持 Google Places API 或自建接口）。
+- 权限管理：包含普通用户与管理员角色，管理员可设置服务费率。
+- 使用 Tailwind CSS 快速构建响应式界面。
 
-In the project directory, you can run:
+## 安装与运行
 
-### `npm start`
+在克隆仓库后，使用 npm 安装依赖并启动开发服务：
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+```
+npm install
+npm start
+```
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+- 默认开发地址为 [http://localhost:3000](http://localhost:3000)。
+- 修改 `.env.local` 文件以配置后端接口地址、Firebase 配置等环境变量。
 
-### `npm test`
+### 环境变量示例
 
-Runs the test suite a single time in a non-interactive mode that is suitable for CI environments.\
-This project configures the script to pass `--watchAll=false` to `react-scripts test` automatically, so you no longer
-need to supply the flag manually when running tests locally or in automation.
+在项目根目录创建 `.env.local` 文件并添加下列内容（示例）：
 
-### `npm run build`
+```
+REACT_APP_BACKEND_BASE_URL=https://your-backend.example.com
+REACT_APP_FIREBASE_API_KEY=...
+REACT_APP_FIREBASE_AUTH_DOMAIN=...
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+请根据实际部署的后端服务和 Firebase 项目设置。
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+## 项目结构
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+- `src/`：React 组件、页面、hooks 等代码。
+- `public/`：静态资源与 HTML 模板。
+- `tailwind.config.js`：Tailwind 配置。
+- `postcss.config.js`：PostCSS 配置。
 
-### `npm run eject`
+## 构建和部署
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+要构建生产版本，请执行：
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+```
+npm run build
+```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+生成的静态文件位于 `build/` 目录，适合部署到 Vercel、Netlify 或其他静态托管服务。
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+## 贡献说明
 
-## Learn More
-
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
-
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+欢迎为此项目贡献代码！请使用标准的 [Conventional Commits](https://www.conventionalcommits.org/) 格式撰写 commit message，并确保通过 lint 和测试。若有建议或问题，请在仓库的 Issue 区提出。
