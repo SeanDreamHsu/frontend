@@ -15,21 +15,29 @@ const AdminDashboard = ({ userToken }) => {
     setError('');
     try {
       const settingsRes = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
-        headers: { Authorization: `Bearer ${userToken}` },
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+        },
       });
       if (!settingsRes.ok) {
         const body = await settingsRes.text();
-        throw new Error(`Settings request failed: ${settingsRes.status} ${settingsRes.statusText} - ${body}`);
+        throw new Error(
+          `Settings request failed: ${settingsRes.status} ${settingsRes.statusText} - ${body}`,
+        );
       }
       const settingsData = await settingsRes.json();
       setSettings(settingsData);
 
       const usersRes = await fetch(`${BACKEND_BASE_URL}/admin/users`, {
-        headers: { Authorization: `Bearer ${userToken}` },
+        headers: {
+          Authorization: `Bearer ${userToken}`,
+        },
       });
       if (!usersRes.ok) {
         const body = await usersRes.text();
-        throw new Error(`Users request failed: ${usersRes.status} ${usersRes.statusText} - ${body}`);
+        throw new Error(
+          `Users request failed: ${usersRes.status} ${usersRes.statusText} - ${body}`,
+        );
       }
       const usersData = await usersRes.json();
       setUsers(usersData);
@@ -48,7 +56,6 @@ const AdminDashboard = ({ userToken }) => {
   const handleSaveSettings = async () => {
     setError('');
     setSuccess('');
-
     try {
       const response = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
         method: 'PUT',
@@ -61,12 +68,12 @@ const AdminDashboard = ({ userToken }) => {
           service_fee_b2b: parseFloat(settings.service_fee_b2b) || 0,
         }),
       });
-
       if (!response.ok) {
         const body = await response.text();
-        throw new Error(`Failed to save settings: ${response.status} ${response.statusText} - ${body}`);
+        throw new Error(
+          `Failed to save settings: ${response.status} ${response.statusText} - ${body}`,
+        );
       }
-
       const updatedSettings = await response.json();
       setSettings(updatedSettings);
       setSuccess('Settings saved successfully.');
@@ -98,7 +105,9 @@ const AdminDashboard = ({ userToken }) => {
       <Alert type="success" message={success} />
 
       <section className="p-6 bg-white/90 rounded-2xl border border-sky-100 shadow-sm">
-        <h3 className="text-xl font-semibold text-slate-700 mb-4">Service Fee Configuration</h3>
+        <h3 className="text-xl font-semibold text-slate-700 mb-4">
+          Service Fee Configuration
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label htmlFor="b2c_fee" className="block text-sm font-medium text-slate-600">
@@ -109,7 +118,12 @@ const AdminDashboard = ({ userToken }) => {
               step="0.01"
               id="b2c_fee"
               value={settings.service_fee_b2c}
-              onChange={(e) => setSettings({ ...settings, service_fee_b2c: e.target.value })}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  service_fee_b2c: e.target.value,
+                })
+              }
               className="w-full mt-1 p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
             />
           </div>
@@ -122,7 +136,12 @@ const AdminDashboard = ({ userToken }) => {
               step="0.01"
               id="b2b_fee"
               value={settings.service_fee_b2b}
-              onChange={(e) => setSettings({ ...settings, service_fee_b2b: e.target.value })}
+              onChange={(e) =>
+                setSettings({
+                  ...settings,
+                  service_fee_b2b: e.target.value,
+                })
+              }
               className="w-full mt-1 p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
             />
           </div>
@@ -143,29 +162,43 @@ const AdminDashboard = ({ userToken }) => {
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-sky-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Email
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Role
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-slate-100">
-              {users.map((user) => (
-                <tr key={user.uid}>
-                  <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{user.role}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <select
-                      onChange={(e) => handleRoleChange(user.uid, e.target.value)}
-                      defaultValue={user.role}
-                      className="p-2 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
-                    >
-                      <option value="b2c">B2C</option>
-                      <option value="b2b">B2B</option>
-                      <option value="admin">Admin</option>
-                    </select>
+              {users.length === 0 ? (
+                <tr>
+                  <td className="px-6 py-4 text-center text-slate-500" colSpan={3}>
+                    暂无用户数据
                   </td>
                 </tr>
-              ))}
+              ) : (
+                users.map((user) => (
+                  <tr key={user.uid}>
+                    <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">{user.role}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <select
+                        onChange={(e) => handleRoleChange(user.uid, e.target.value)}
+                        defaultValue={user.role}
+                        className="p-2 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400"
+                      >
+                        <option value="b2c">B2C</option>
+                        <option value="b2b">B2B</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
