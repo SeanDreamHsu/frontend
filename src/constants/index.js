@@ -1,0 +1,152 @@
+export const BACKEND_BASE_URL = 'https://backend-23qh.onrender.com/api';
+
+export const carrierDetailsMap = {
+  fedex: {
+    name: 'FedEx',
+    services: [
+      {
+        name: 'FedEx 2Day',
+        serviceCode: 'fedex_2day',
+        packages: [
+          { name: 'Package', code: 'package' },
+          { name: 'FedEx Envelope', code: 'fedex_envelope' },
+          { name: 'FedEx Pak', code: 'fedex_pak' },
+          { name: 'FedEx Small Box', code: 'fedex_small_box' },
+          { name: 'FedEx Medium Box', code: 'fedex_medium_box' },
+          { name: 'FedEx Large Box', code: 'fedex_large_box' },
+        ],
+      },
+      {
+        name: 'FedEx First Overnight',
+        serviceCode: 'fedex_first_overnight',
+        packages: [
+          { name: 'Package', code: 'package' },
+          { name: 'FedEx Envelope', code: 'fedex_envelope' },
+          { name: 'FedEx Pak', code: 'fedex_pak' },
+        ],
+      },
+      {
+        name: 'FedEx Priority Overnight',
+        serviceCode: 'fedex_priority_overnight',
+        packages: [
+          { name: 'Package', code: 'package' },
+          { name: 'FedEx Envelope', code: 'fedex_envelope' },
+          { name: 'FedEx Pak', code: 'fedex_pak' },
+          { name: 'FedEx Small Box', code: 'fedex_small_box' },
+          { name: 'FedEx Medium Box', code: 'fedex_medium_box' },
+          { name: 'FedEx Large Box', code: 'fedex_large_box' },
+        ],
+      },
+      {
+        name: 'FedEx Standard Overnight',
+        serviceCode: 'fedex_standard_overnight',
+        packages: [
+          { name: 'Package', code: 'package' },
+          { name: 'FedEx Envelope', code: 'fedex_envelope' },
+          { name: 'FedEx Pak', code: 'fedex_pak' },
+        ],
+      },
+      {
+        name: 'FedEx Express Saver',
+        serviceCode: 'fedex_express_saver',
+        packages: [
+          { name: 'Package', code: 'package' },
+          { name: 'FedEx Envelope', code: 'fedex_envelope' },
+        ],
+      },
+      {
+        name: 'FedEx Ground',
+        serviceCode: 'fedex_ground',
+        packages: [
+          { name: 'Package', code: 'package' },
+        ],
+      },
+      {
+        name: 'FedEx Home Delivery',
+        serviceCode: 'fedex_home_delivery',
+        packages: [
+          { name: 'Package', code: 'package' },
+        ],
+      },
+      {
+        name: 'FedEx International Priority',
+        serviceCode: 'fedex_international_priority',
+        packages: [
+          { name: 'Package', code: 'package' },
+          { name: 'FedEx Envelope', code: 'fedex_envelope' },
+          { name: 'FedEx Pak', code: 'fedex_pak' },
+          { name: 'FedEx Small Box', code: 'fedex_small_box' },
+          { name: 'FedEx Medium Box', code: 'fedex_medium_box' },
+          { name: 'FedEx Large Box', code: 'fedex_large_box' },
+        ],
+      },
+      {
+        name: 'FedEx International Economy',
+        serviceCode: 'fedex_international_economy',
+        packages: [
+          { name: 'Package', code: 'package' },
+        ],
+      },
+      {
+        name: 'FedEx International Ground',
+        serviceCode: 'fedex_international_ground',
+        packages: [
+          { name: 'Package', code: 'package' },
+        ],
+      },
+    ],
+  },
+};
+
+export const usStates = [
+  { name: 'Alabama', abbreviation: 'AL' },
+  { name: 'Alaska', abbreviation: 'AK' },
+  { name: 'Arizona', abbreviation: 'AZ' },
+  { name: 'Arkansas', abbreviation: 'AR' },
+  { name: 'California', abbreviation: 'CA' },
+  { name: 'Colorado', abbreviation: 'CO' },
+  { name: 'Connecticut', abbreviation: 'CT' },
+  { name: 'Delaware', abbreviation: 'DE' },
+  { name: 'Florida', abbreviation: 'FL' },
+  { name: 'Georgia', abbreviation: 'GA' },
+  { name: 'Hawaii', abbreviation: 'HI' },
+  { name: 'Idaho', abbreviation: 'ID' },
+  { name: 'Illinois', abbreviation: 'IL' },
+  { name: 'Indiana', abbreviation: 'IN' },
+  { name: 'Iowa', abbreviation: 'IA' },
+  { name: 'Kansas', abbreviation: 'KS' },
+  { name: 'Kentucky', abbreviation: 'KY' },
+  { name: 'Louisiana', abbreviation: 'LA' },
+  { name: 'Maine', abbreviation: 'ME' },
+  { name: 'Maryland', abbreviation: 'MD' },
+  { name: 'Massachusetts', abbreviation: 'MA' },
+  { name: 'Michigan', abbreviation: 'MI' },
+  { name: 'Minnesota', abbreviation: 'MN' },
+  { name: 'Mississippi', abbreviation: 'MS' },
+  { name: 'Missouri', abbreviation: 'MO' },
+  { name: 'Montana', abbreviation: 'MT' },
+  { name: 'Nebraska', abbreviation: 'NE' },
+  { name: 'Nevada', abbreviation: 'NV' },
+  { name: 'New Hampshire', abbreviation: 'NH' },
+  { name: 'New Jersey', abbreviation: 'NJ' },
+  { name: 'New Mexico', abbreviation: 'NM' },
+  { name: 'New York', abbreviation: 'NY' },
+  { name: 'North Carolina', abbreviation: 'NC' },
+  { name: 'North Dakota', abbreviation: 'ND' },
+  { name: 'Ohio', abbreviation: 'OH' },
+  { name: 'Oklahoma', abbreviation: 'OK' },
+  { name: 'Oregon', abbreviation: 'OR' },
+  { name: 'Pennsylvania', abbreviation: 'PA' },
+  { name: 'Rhode Island', abbreviation: 'RI' },
+  { name: 'South Carolina', abbreviation: 'SC' },
+  { name: 'South Dakota', abbreviation: 'SD' },
+  { name: 'Tennessee', abbreviation: 'TN' },
+  { name: 'Texas', abbreviation: 'TX' },
+  { name: 'Utah', abbreviation: 'UT' },
+  { name: 'Vermont', abbreviation: 'VT' },
+  { name: 'Virginia', abbreviation: 'VA' },
+  { name: 'Washington', abbreviation: 'WA' },
+  { name: 'West Virginia', abbreviation: 'WV' },
+  { name: 'Wisconsin', abbreviation: 'WI' },
+  { name: 'Wyoming', abbreviation: 'WY' },
+];
