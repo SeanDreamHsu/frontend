@@ -1,646 +1,35 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Routes, Route, Navigate, Link, useNavigate, useLocation } from 'react-router-dom';
-import { Package, MapPin, DollarSign, Loader2, Send, AlertTriangle, CheckCircle, XCircle, ArrowLeft, ArrowRight, LogOut, LogIn, Settings } from 'lucide-react';
-import { initializeApp } from "firebase/app";
-import { getAuth, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import React, { useCallback, useEffect, useState } from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import {
+  DollarSign,
+  Loader2,
+  Send,
+  ArrowLeft,
+  ArrowRight,
+  LogOut,
+  LogIn,
+  Settings,
+} from 'lucide-react';
 
-// --- Firebase Configuration ---
-// ⚠️ IMPORTANT: Replace this with your actual Firebase config object.
-const firebaseConfig = {
-  apiKey: "AIzaSyAa6QY_SBpbn9vkRq6VQ8lFl4-oNyWKAks",
-  authDomain: "shippingbackend.firebaseapp.com",
-  projectId: "shippingbackend",
-  storageBucket: "shippingbackend.firebasestorage.app",
-  messagingSenderId: "671906577144",
-  appId: "1:671906577144:web:1798cdf8981fd0ac8ed90d",
-  measurementId: "G-K92DCKVR4Z"
-};
+import LoginPage from './components/LoginPage';
+import Alert from './components/Alert';
+import AddressForm from './components/forms/AddressForm';
+import PackageForm from './components/forms/PackageForm';
+import Summary from './components/Summary';
+import Stepper from './components/Stepper';
+import AdminRoute from './components/admin/AdminRoute';
+import AdminDashboard from './components/admin/AdminDashboard';
+import { auth } from './lib/firebase';
+import { deriveRoleFromClaims } from './utils/auth';
+import { BACKEND_BASE_URL } from './constants';
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-// --- Configuration & Constants ---
-const BACKEND_BASE_URL = 'https://backend-23qh.onrender.com/api';
-
-const carrierDetailsMap = {
-  "fedex": {
-    name: "FedEx",
-    services: [
-      { 
-        name: "FedEx 2Day", 
-        serviceCode: "fedex_2day",
-        packages: [
-            { name: "Package", code: "package" },
-            { name: "FedEx Envelope", code: "fedex_envelope" },
-            { name: "FedEx Pak", code: "fedex_pak" },
-            { name: "FedEx Small Box", code: "fedex_small_box" },
-            { name: "FedEx Medium Box", code: "fedex_medium_box" },
-            { name: "FedEx Large Box", code: "fedex_large_box" },
-        ]
-      },
-      { 
-        name: "FedEx First Overnight", 
-        serviceCode: "fedex_first_overnight",
-        packages: [
-            { name: "Package", code: "package" },
-            { name: "FedEx Envelope", code: "fedex_envelope" },
-            { name: "FedEx Pak", code: "fedex_pak" },
-        ]
-      },
-      { 
-        name: "FedEx Priority Overnight", 
-        serviceCode: "fedex_priority_overnight",
-        packages: [
-            { name: "Package", code: "package" },
-            { name: "FedEx Envelope", code: "fedex_envelope" },
-            { name: "FedEx Pak", code: "fedex_pak" },
-            { name: "FedEx Small Box", code: "fedex_small_box" },
-            { name: "FedEx Medium Box", code: "fedex_medium_box" },
-            { name: "FedEx Large Box", code: "fedex_large_box" },
-        ]
-      },
-      { 
-        name: "FedEx Standard Overnight", 
-        serviceCode: "fedex_standard_overnight",
-        packages: [
-            { name: "Package", code: "package" },
-            { name: "FedEx Envelope", code: "fedex_envelope" },
-            { name: "FedEx Pak", code: "fedex_pak" },
-        ]
-      },
-      { 
-        name: "FedEx Express Saver", 
-        serviceCode: "fedex_express_saver",
-        packages: [
-            { name: "Package", code: "package" },
-            { name: "FedEx Envelope", code: "fedex_envelope" },
-        ]
-      },
-      { 
-        name: "FedEx Ground", 
-        serviceCode: "fedex_ground",
-        packages: [
-            { name: "Package", code: "package" }
-        ]
-      },
-      { 
-        name: "FedEx Home Delivery", 
-        serviceCode:"fedex_home_delivery",
-        packages: [
-            { name: "Package", code: "package" }
-        ]
-      },
-      { 
-        name: "FedEx International Priority", 
-        serviceCode: "fedex_international_priority",
-        packages: [
-            { name: "Package", code: "package" },
-            { name: "FedEx Envelope", code: "fedex_envelope" },
-            { name: "FedEx Pak", code: "fedex_pak" },
-            { name: "FedEx Small Box", code: "fedex_small_box" },
-            { name: "FedEx Medium Box", code: "fedex_medium_box" },
-            { name: "FedEx Large Box", code: "fedex_large_box" },
-        ]
-      },
-      { 
-        name: "FedEx International Economy", 
-        serviceCode: "fedex_international_economy",
-        packages: [
-            { name: "Package", code: "package" }
-        ]
-      },
-      { 
-        name: "FedEx International Ground", 
-        serviceCode: "fedex_international_ground",
-        packages: [
-            { name: "Package", code: "package" }
-        ]
-      }
-    ]
-  }
-};
-
-const usStates = [
-    { name: 'Alabama', abbreviation: 'AL' }, { name: 'Alaska', abbreviation: 'AK' },
-    { name: 'Arizona', abbreviation: 'AZ' }, { name: 'Arkansas', abbreviation: 'AR' },
-    { name: 'California', abbreviation: 'CA' }, { name: 'Colorado', abbreviation: 'CO' },
-    { name: 'Connecticut', abbreviation: 'CT' }, { name: 'Delaware', abbreviation: 'DE' },
-    { name: 'Florida', abbreviation: 'FL' }, { name: 'Georgia', abbreviation: 'GA' },
-    { name: 'Hawaii', abbreviation: 'HI' }, { name: 'Idaho', abbreviation: 'ID' },
-    { name: 'Illinois', abbreviation: 'IL' }, { name: 'Indiana', abbreviation: 'IN' },
-    { name: 'Iowa', abbreviation: 'IA' }, { name: 'Kansas', abbreviation: 'KS' },
-    { name: 'Kentucky', abbreviation: 'KY' }, { name: 'Louisiana', abbreviation: 'LA' },
-    { name: 'Maine', abbreviation: 'ME' }, { name: 'Maryland', abbreviation: 'MD' },
-    { name: 'Massachusetts', abbreviation: 'MA' }, { name: 'Michigan', abbreviation: 'MI' },
-    { name: 'Minnesota', abbreviation: 'MN' }, { name: 'Mississippi', abbreviation: 'MS' },
-    { name: 'Missouri', abbreviation: 'MO' }, { name: 'Montana', abbreviation: 'MT' },
-    { name: 'Nebraska', abbreviation: 'NE' }, { name: 'Nevada', abbreviation: 'NV' },
-    { name: 'New Hampshire', abbreviation: 'NH' }, { name: 'New Jersey', abbreviation: 'NJ' },
-    { name: 'New Mexico', abbreviation: 'NM' }, { name: 'New York', abbreviation: 'NY' },
-    { name: 'North Carolina', abbreviation: 'NC' }, { name: 'North Dakota', abbreviation: 'ND' },
-    { name: 'Ohio', abbreviation: 'OH' }, { name: 'Oklahoma', abbreviation: 'OK' },
-    { name: 'Oregon', abbreviation: 'OR' }, { name: 'Pennsylvania', abbreviation: 'PA' },
-    { name: 'Rhode Island', abbreviation: 'RI' }, { name: 'South Carolina', abbreviation: 'SC' },
-    { name: 'South Dakota', abbreviation: 'SD' }, { name: 'Tennessee', abbreviation: 'TN' },
-    { name: 'Texas', abbreviation: 'TX' }, { name: 'Utah', abbreviation: 'UT' },
-    { name: 'Vermont', abbreviation: 'VT' }, { name: 'Virginia', abbreviation: 'VA' },
-    { name: 'Washington', abbreviation: 'WA' }, { name: 'West Virginia', abbreviation: 'WV' },
-    { name: 'Wisconsin', abbreviation: 'WI' }, { name: 'Wyoming', abbreviation: 'WY' }
-];
-
-// --- Utility Functions ---
-const debounce = (func, delay) => {
-    let timeout;
-    return (...args) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => func(...args), delay);
-    };
-};
-
-export const deriveRoleFromClaims = (claims = {}) => {
-    if (typeof claims.role === 'string') {
-        const trimmedRole = claims.role.trim();
-        if (trimmedRole) {
-            return trimmedRole.toLowerCase();
-        }
-    }
-
-    const prioritizedRoles = ['admin', 'b2b', 'b2c'];
-
-    if (Array.isArray(claims.roles) && claims.roles.length) {
-        const normalizedRoles = new Set(claims.roles.map(role => String(role).toLowerCase()));
-        for (const role of prioritizedRoles) {
-            if (normalizedRoles.has(role)) return role;
-        }
-    }
-
-    for (const role of prioritizedRoles) {
-        if (claims[role] === true) return role;
-    }
-
-    return null;
-};
-
-// --- API Calls ---
-const fetchAddressSuggestions = async (query) => {
-  try {
-    const response = await fetch(`${BACKEND_BASE_URL}/places-autocomplete?input=${encodeURIComponent(query)}`);
-    if (!response.ok) {
-      console.error("Failed to fetch address suggestions from backend.");
-      return [];
-    }
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error("Error calling address suggestions API:", error);
-    return [];
-  }
-};
-
-// --- Reusable UI Components ---
-
-const Alert = ({ type, message }) => {
-    const styleConfig = {
-        warning: { bg: 'bg-amber-50', border: 'border-amber-300', text: 'text-amber-700', Icon: AlertTriangle },
-        error: { bg: 'bg-rose-50', border: 'border-rose-300', text: 'text-rose-700', Icon: XCircle },
-        success: { bg: 'bg-emerald-50', border: 'border-emerald-300', text: 'text-emerald-700', Icon: CheckCircle }
-    };
-    const { bg, border, text, Icon } = styleConfig[type] || styleConfig.warning;
-    if (!message) return null;
-    return (
-        <div className={`${bg} border ${border} ${text} p-4 rounded-xl shadow-sm`} role="alert">
-            <div className="flex">
-                <div className="py-1"><Icon className="h-5 w-5 mr-3" /></div>
-                <div><p className="whitespace-pre-wrap">{message}</p></div>
-            </div>
-        </div>
-    );
-};
-
-const LoginPage = ({ show, onClose }) => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [isLoginView, setIsLoginView] = useState(true);
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
-
-    if (!show) return null;
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
-        try {
-            if (isLoginView) {
-                await signInWithEmailAndPassword(auth, email, password);
-            } else {
-                await createUserWithEmailAndPassword(auth, email, password);
-            }
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-slate-900/30 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="w-full max-w-md bg-white/95 p-8 rounded-3xl shadow-xl border border-sky-100 relative">
-                <button onClick={onClose} className="absolute top-4 right-4 text-slate-500 hover:text-slate-700">
-                    <XCircle size={24} />
-                </button>
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-extrabold text-slate-700">
-                        {isLoginView ? 'Welcome Back' : 'Create Account'}
-                    </h1>
-                </div>
-                <form onSubmit={handleSubmit} className="space-y-6 text-left">
-                    <div>
-                        <label htmlFor="email" className="block text-sm font-medium text-slate-600">Email Address</label>
-                        <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400"/>
-                    </div>
-                    <div>
-                        <label htmlFor="password" className="block text-sm font-medium text-slate-600">Password</label>
-                        <input id="password" type="password" required minLength="6" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-1 p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400"/>
-                    </div>
-                    {error && <p className="text-sm text-red-600">{error}</p>}
-                    <button type="submit" disabled={loading} className="w-full flex justify-center py-3 px-4 rounded-xl text-lg font-semibold text-white bg-sky-500 hover:bg-sky-400 disabled:bg-slate-300 disabled:text-slate-500 transition-colors">
-                        {loading ? 'Processing...' : (isLoginView ? 'Sign In' : 'Sign Up')}
-                    </button>
-                </form>
-                <div className="mt-6 text-center">
-                    <button onClick={() => setIsLoginView(!isLoginView)} className="font-medium text-sky-600 hover:text-sky-500">
-                        {isLoginView ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const AdminDashboard = ({ userToken }) => {
-    const [settings, setSettings] = useState({ service_fee_b2c: 0, service_fee_b2b: 0 });
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
-
-    const fetchData = useCallback(async () => {
-        setLoading(true);
-        setError('');
-        try {
-            const settingsRes = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
-                headers: { 'Authorization': `Bearer ${userToken}` }
-            });
-            if (!settingsRes.ok) {
-                const body = await settingsRes.text();
-                throw new Error(`Settings request failed: ${settingsRes.status} ${settingsRes.statusText} - ${body}`);
-            }
-            const settingsData = await settingsRes.json();
-            setSettings(settingsData);
-
-            const usersRes = await fetch(`${BACKEND_BASE_URL}/admin/users`, {
-                headers: { 'Authorization': `Bearer ${userToken}` }
-            });
-            if (!usersRes.ok) {
-                const body = await usersRes.text();
-                throw new Error(`Users request failed: ${usersRes.status} ${usersRes.statusText} - ${body}`);
-            }
-            const usersData = await usersRes.json();
-            setUsers(usersData);
-        } catch (err) {
-            console.error(err);
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    }, [userToken]);
-
-    useEffect(() => {
-        fetchData();
-    }, [fetchData]);
-
-    const handleSaveSettings = async () => {
-        setError('');
-        setSuccess('');
-
-        try {
-            const response = await fetch(`${BACKEND_BASE_URL}/admin/settings`, {
-                method: 'PUT',
-                headers: {
-                    'Authorization': `Bearer ${userToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    service_fee_b2c: parseFloat(settings.service_fee_b2c) || 0,
-                    service_fee_b2b: parseFloat(settings.service_fee_b2b) || 0,
-                }),
-            });
-
-            if (!response.ok) {
-                const body = await response.text();
-                throw new Error(`Failed to save settings: ${response.status} ${response.statusText} - ${body}`);
-            }
-
-            const updatedSettings = await response.json();
-            setSettings(updatedSettings);
-            setSuccess('Settings saved successfully.');
-        } catch (err) {
-            console.error(err);
-            setError(err.message);
-        }
-    };
-
-    const handleRoleChange = async (userId, newRole) => {
-        alert(`Changing user ${userId} to ${newRole}`);
-    };
-
-    if (loading) {
-        return <div className="flex justify-center items-center p-8"><Loader2 className="animate-spin h-8 w-8 text-sky-500" /></div>;
-    }
-
-    return (
-        <div className="space-y-8">
-            <h2 className="text-3xl font-bold text-slate-700">Admin Dashboard</h2>
-            <Alert type="error" message={error} />
-            <Alert type="success" message={success} />
-
-            <section className="p-6 bg-white/90 rounded-2xl border border-sky-100 shadow-sm">
-                <h3 className="text-xl font-semibold text-slate-700 mb-4">Service Fee Configuration</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label htmlFor="b2c_fee" className="block text-sm font-medium text-slate-600">B2C Service Fee ($)</label>
-                        <input type="number" step="0.01" id="b2c_fee" value={settings.service_fee_b2c} onChange={e => setSettings({...settings, service_fee_b2c: e.target.value})} className="w-full mt-1 p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                    </div>
-                    <div>
-                        <label htmlFor="b2b_fee" className="block text-sm font-medium text-slate-600">B2B Service Fee ($)</label>
-                        <input type="number" step="0.01" id="b2b_fee" value={settings.service_fee_b2b} onChange={e => setSettings({...settings, service_fee_b2b: e.target.value})} className="w-full mt-1 p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                    </div>
-                </div>
-                <div className="mt-6 text-right">
-                    <button onClick={handleSaveSettings} className="py-2 px-6 rounded-xl font-semibold text-white bg-sky-500 hover:bg-sky-400 transition-colors">Save Settings</button>
-                </div>
-            </section>
-
-            <section className="p-6 bg-white/90 rounded-2xl border border-sky-100 shadow-sm">
-                 <h3 className="text-xl font-semibold text-slate-700 mb-4">User Management</h3>
-                 <div className="overflow-x-auto">
-                     <table className="min-w-full divide-y divide-slate-200">
-                         <thead className="bg-sky-50">
-                             <tr>
-                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
-                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Role</th>
-                                 <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
-                             </tr>
-                         </thead>
-                         <tbody className="bg-white divide-y divide-slate-100">
-                             {users.map(user => (
-                                 <tr key={user.uid}>
-                                     <td className="px-6 py-4 whitespace-nowrap">{user.email}</td>
-                                     <td className="px-6 py-4 whitespace-nowrap">{user.role}</td>
-                                     <td className="px-6 py-4 whitespace-nowrap">
-                                         <select onChange={(e) => handleRoleChange(user.uid, e.target.value)} defaultValue={user.role} className="p-2 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400">
-                                             <option value="b2c">B2C</option>
-                                             <option value="b2b">B2B</option>
-                                             <option value="admin">Admin</option>
-                                         </select>
-                                     </td>
-                                 </tr>
-                             ))}
-                         </tbody>
-                     </table>
-                 </div>
-            </section>
-        </div>
-    );
-};
-
-const AddressForm = ({ type, values, setters }) => {
-    const title = type.charAt(0).toUpperCase() + type.slice(1);
-    const [suggestions, setSuggestions] = useState([]);
-    const [isSearching, setIsSearching] = useState(false);
-    const suggestionsRef = useRef(null);
-
-    const debouncedFetch = useCallback(debounce(async (query) => {
-        if (query.length < 3) { setSuggestions([]); setIsSearching(false); return; }
-        setIsSearching(true);
-        const result = await fetchAddressSuggestions(query);
-        setSuggestions(result);
-        setIsSearching(false);
-    }, 500), []);
-
-    const handleStreet1Change = (e) => {
-        const value = e.target.value;
-        setters.setStreet1(value);
-        debouncedFetch(value);
-    };
-
-    const handleSuggestionClick = (suggestion) => {
-        setters.setStreet1(suggestion.street || '');
-        setters.setCity(suggestion.city || '');
-        setters.setState(suggestion.state || '');
-        setters.setZip(suggestion.zip || '');
-        setSuggestions([]);
-    };
-
-    useEffect(() => {
-        const handleClickOutside = (event) => {
-            if (suggestionsRef.current && !suggestionsRef.current.contains(event.target)) {
-                setSuggestions([]);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, [suggestionsRef]);
-
-    return (
-        <section className="p-6 bg-white/90 rounded-2xl border border-sky-100 shadow-sm">
-            <h2 className="text-2xl font-semibold text-slate-700 mb-6 flex items-center"><MapPin className="mr-3 text-sky-500" size={24} /> {title} Info</h2>
-            <div className="grid grid-cols-1 gap-6">
-                <input required value={values.name} onChange={e => setters.setName(e.target.value)} placeholder="Name" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                <input value={values.company} onChange={e => setters.setCompany(e.target.value)} placeholder="Company (Optional)" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                <div className="relative" ref={suggestionsRef}>
-                    <input required value={values.street1} onChange={handleStreet1Change} placeholder="Street 1" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                    {isSearching && <Loader2 className="animate-spin absolute right-3 top-3 h-5 w-5 text-sky-500" />}
-                    {suggestions.length > 0 && (
-                        <ul className="absolute z-10 w-full bg-white border border-sky-100 rounded-xl mt-1 shadow-lg max-h-60 overflow-y-auto">
-                            {suggestions.map((s, index) => (
-                                <li key={index} onClick={() => handleSuggestionClick(s)} className="p-3 hover:bg-sky-50 cursor-pointer">{s.description}</li>
-                            ))}
-                        </ul>
-                    )}
-                </div>
-                <input value={values.street2} onChange={e => setters.setStreet2(e.target.value)} placeholder="Street 2" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                    <input required value={values.city} onChange={e => setters.setCity(e.target.value)} placeholder="City" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                    <select required value={values.state} onChange={e => setters.setState(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl bg-white text-base focus:ring-2 focus:ring-sky-200 focus:border-sky-400">
-                        <option value="">Select State</option>
-                        {usStates.map(state => <option key={state.abbreviation} value={state.abbreviation}>{state.abbreviation}</option>)}
-                    </select>
-                    <input required value={values.zip} onChange={e => setters.setZip(e.target.value)} placeholder="Zip Code" pattern="[0-9]{5}" title="Enter a 5-digit zip code" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                </div>
-                {type === 'destination' && (
-                    <div className="mt-4">
-                      <label className="block text-base font-medium text-slate-600 mb-2">Address Type</label>
-                      <div className="flex items-center">
-                        <button type="button" role="switch" aria-checked={!values.isResidential} onClick={() => setters.setIsResidential(!values.isResidential)} className={`${!values.isResidential ? 'bg-sky-500' : 'bg-slate-200'} relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sky-200 focus:ring-offset-2`}>
-                          <span aria-hidden="true" className={`${!values.isResidential ? 'translate-x-5' : 'translate-x-0'} pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out`} />
-                        </button>
-                        <span className="ml-3 text-base font-medium text-slate-700">Commercial</span>
-                      </div>
-                    </div>
-                )}
-            </div>
-        </section>
-    );
-};
-
-const PackageForm = ({ values, setters, onOptionChange }) => {
-    const availablePackages = carrierDetailsMap.fedex.services.find(s => s.serviceCode === values.selectedServiceCode)?.packages || [];
-
-    const handleServiceChange = (e) => {
-        setters.setSelectedServiceCode(e.target.value);
-        onOptionChange();
-    };
-
-    const handlePackageChange = (e) => {
-        setters.setPackageCode(e.target.value);
-        onOptionChange();
-    };
-
-    return (
-        <section className="p-6 bg-white/90 rounded-2xl border border-sky-100 shadow-sm">
-            <h2 className="text-2xl font-semibold text-slate-700 mb-6 flex items-center"><Package className="mr-3 text-sky-500" size={24} /> Package & Carrier</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6">
-                <div className="relative">
-                    <input required min="0.1" value={values.weight} onChange={e => setters.setWeight(e.target.value)} placeholder="Weight" type="number" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 pr-12 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">lbs</span>
-                </div>
-                <div className="relative">
-                    <input required min="1" value={values.length} onChange={e => setters.setLength(e.target.value)} placeholder="Length" type="number" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 pr-10 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">in</span>
-                </div>
-                <div className="relative">
-                    <input required min="1" value={values.width} onChange={e => setters.setWidth(e.target.value)} placeholder="Width" type="number" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 pr-10 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">in</span>
-                </div>
-                <div className="relative">
-                    <input required min="1" value={values.height} onChange={e => setters.setHeight(e.target.value)} placeholder="Height" type="number" className="w-full p-3 border border-slate-200 rounded-xl bg-slate-50 pr-10 focus:ring-2 focus:ring-sky-200 focus:border-sky-400" />
-                    <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">in</span>
-                </div>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mt-6">
-                <div className="flex items-center bg-white/80 p-3 border border-slate-200 rounded-xl sm:col-span-1">
-                    <img src="/Fedex-logo.png"/>
-                    <span className="ml-3 text-base font-medium text-slate-600">{carrierDetailsMap.fedex.name}</span>
-                </div>
-                <select required value={values.selectedServiceCode} onChange={handleServiceChange} className="w-full p-3 border border-slate-200 rounded-xl text-base bg-white focus:ring-2 focus:ring-sky-200 focus:border-sky-400 sm:col-span-1">
-                    <option value="">Select Service</option>
-                    {carrierDetailsMap.fedex.services.map(s => <option key={s.serviceCode} value={s.serviceCode}>{s.name}</option>)}
-                </select>
-                <select required value={values.packageCode} onChange={handlePackageChange} className="w-full p-3 border border-slate-200 rounded-xl text-base bg-white focus:ring-2 focus:ring-sky-200 focus:border-sky-400 sm:col-span-1">
-                    <option value="">Select Package Type</option>
-                    {availablePackages.map(p => <option key={p.code} value={p.code}>{p.name}</option>)}
-                </select>
-            </div>
-        </section>
-    );
-};
-
-const Summary = ({ values }) => (
-    <section className="p-6 bg-white/90 rounded-2xl border border-sky-100 shadow-sm">
-        <h2 className="text-2xl font-semibold text-slate-700 mb-6">Summary</h2>
-        <div className="space-y-4 text-slate-600">
-            <div>
-                <h3 className="font-semibold text-slate-700">Origin</h3>
-                <p>{values.originName}, {values.originStreet1}, {values.originCity}, {values.originState} {values.originZip}</p>
-            </div>
-            <div>
-                <h3 className="font-semibold text-slate-700">Destination</h3>
-                <p>{values.destinationName}, {values.destinationStreet1}, {values.destinationCity}, {values.destinationState} {values.destinationZip}</p>
-            </div>
-            <div>
-                <h3 className="font-semibold text-slate-700">Package</h3>
-                <p>{values.weight} lbs, {values.length}x{values.width}x{values.height} in</p>
-            </div>
-             <div>
-                <h3 className="font-semibold text-slate-700">Service</h3>
-                <p>{carrierDetailsMap.fedex.services.find(s => s.serviceCode === values.selectedServiceCode)?.name || 'N/A'}</p>
-            </div>
-        </div>
-    </section>
-);
-
-const Stepper = ({ currentStep, steps }) => (
-    <nav aria-label="Progress" className="pt-4">
-        <ol role="list" className="space-y-4">
-            <div className="flex items-center">
-                {steps.map((step, stepIdx) => (
-                    <li key={step.name} className={`flex-1 ${stepIdx !== steps.length - 1 ? 'pr-8 sm:pr-20' : ''}`}>
-                        <div className={`text-center text-sm font-medium ${stepIdx <= currentStep ? 'text-sky-800' : 'text-slate-600'}`}>
-                            {step.name}
-                        </div>
-                    </li>
-                ))}
-            </div>
-            <div className="flex items-center">
-                {steps.map((step, stepIdx) => (
-                    <li key={step.name + '_icon'} className={`relative ${stepIdx !== steps.length - 1 ? 'flex-1' : ''}`}>
-                        {stepIdx < currentStep ? (
-                            <>
-                                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                                    <div className="h-0.5 w-full bg-sky-400" />
-                                </div>
-                                <span className="relative flex h-8 w-8 items-center justify-center bg-sky-500 rounded-full text-white mx-auto">
-                                    <CheckCircle className="h-5 w-5" />
-                                </span>
-                            </>
-                        ) : stepIdx === currentStep ? (
-                            <>
-                                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                                    <div className="h-0.5 w-full bg-slate-200" />
-                                </div>
-                                <span className="relative flex h-8 w-8 items-center justify-center bg-white border-2 border-sky-400 rounded-full mx-auto">
-                                    <span className="h-2.5 w-2.5 bg-sky-400 rounded-full" />
-                                </span>
-                            </>
-                        ) : (
-                            <>
-                                <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                                    <div className="h-0.5 w-full bg-slate-200" />
-                                </div>
-                                <span className="relative flex h-8 w-8 items-center justify-center bg-white border-2 border-slate-200 rounded-full mx-auto" />
-                            </>
-                        )}
-                    </li>
-                ))}
-            </div>
-        </ol>
-    </nav>
-);
-
-
-// --- Route Guards ---
-export const AdminRoute = ({ userRole, userToken, children }) => {
-  const isAdmin = typeof userRole === 'string' && userRole.trim().toLowerCase() === 'admin';
-
-  if (!userToken || !isAdmin) {
-    return <Navigate to="/" replace />;
-  }
-
-  return children;
-};
-
-// --- Main App Component ---
 const App = () => {
-  // Authentication State
   const [userToken, setUserToken] = useState(null);
   const [userRole, setUserRole] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
 
-  // Form State
   const [step, setStep] = useState(1);
   const [originName, setOriginName] = useState('');
   const [originCompany, setOriginCompany] = useState('');
@@ -649,7 +38,7 @@ const App = () => {
   const [originCity, setOriginCity] = useState('');
   const [originState, setOriginState] = useState('');
   const [originZip, setOriginZip] = useState('');
-  
+
   const [destinationName, setDestinationName] = useState('');
   const [destinationCompany, setDestinationCompany] = useState('');
   const [destinationStreet1, setDestinationStreet1] = useState('');
@@ -658,18 +47,17 @@ const App = () => {
   const [destinationState, setDestinationState] = useState('');
   const [destinationZip, setDestinationZip] = useState('');
   const [isResidential, setIsResidential] = useState(true);
-  
+
   const [weight, setWeight] = useState('');
   const [length, setLength] = useState('');
   const [width, setWidth] = useState('');
   const [height, setHeight] = useState('');
-  
+
   const [selectedCarrierCode] = useState('fedex');
-  const [selectedCarrierId] = useState(371370); 
+  const [selectedCarrierId] = useState(371370);
   const [selectedServiceCode, setSelectedServiceCode] = useState('');
   const [packageCode, setPackageCode] = useState('');
 
-  // UI/Flow State
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [warning, setWarning] = useState('');
@@ -683,16 +71,15 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const isAdminRoute = location.pathname.startsWith('/admin');
-  const handleAdminNavigation = () => {
-    navigate(isAdminRoute ? '/' : '/admin');
-  };
-  
-  // Authentication Listener
+
+  const steps = [{ name: 'Origin' }, { name: 'Destination & Package' }, { name: 'Confirm & Create' }];
+
   useEffect(() => {
     if (process.env.NODE_ENV === 'test') {
       setAuthLoading(false);
       return;
     }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         const idTokenResult = await user.getIdTokenResult();
@@ -709,6 +96,7 @@ const App = () => {
       }
       setAuthLoading(false);
     });
+
     return () => unsubscribe && unsubscribe();
   }, []);
 
@@ -718,18 +106,37 @@ const App = () => {
     }
   }, [location.pathname, userToken]);
 
+  const handleAdminNavigation = () => {
+    navigate(isAdminRoute ? '/' : '/admin');
+  };
+
   const handleSignOut = () => {
-    signOut(auth).catch((error) => console.error("Sign out error", error));
+    signOut(auth).catch((signOutError) => console.error('Sign out error', signOutError));
   };
 
   const getShipmentDetails = () => ({
-    originName, originCompany, originStreet1, originStreet2, originCity, originState, originZip,
-    destinationName, destinationCompany, destinationStreet1, destinationStreet2, destinationCity, destinationState, destinationZip,
-    weight, length, width, height,
+    originName,
+    originCompany,
+    originStreet1,
+    originStreet2,
+    originCity,
+    originState,
+    originZip,
+    destinationName,
+    destinationCompany,
+    destinationStreet1,
+    destinationStreet2,
+    destinationCity,
+    destinationState,
+    destinationZip,
+    weight,
+    length,
+    width,
+    height,
     carrierCode: selectedCarrierCode,
     carrierId: selectedCarrierId,
     serviceCode: selectedServiceCode,
-    packageCode: packageCode,
+    packageCode,
     isResidential,
     shippingCost,
     baseShippingCost,
@@ -739,22 +146,29 @@ const App = () => {
   const handleApiRequest = async (endpoint, details, requireAuth = false) => {
     const headers = { 'Content-Type': 'application/json' };
     if (userToken) {
-        headers['Authorization'] = `Bearer ${userToken}`;
+      headers.Authorization = `Bearer ${userToken}`;
     } else if (requireAuth) {
-        setShowLogin(true);
-        throw new Error("Login required");
+      setShowLogin(true);
+      throw new Error('Login required');
     }
 
     const response = await fetch(`${BACKEND_BASE_URL}/${endpoint}`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(details),
+      method: 'POST',
+      headers,
+      body: JSON.stringify(details),
     });
-    
+
     let result;
-    try { result = await response.json(); } catch (e) { throw new Error("Server response was not valid JSON."); }
-    if (!response.ok) throw new Error(result.error || `Failed to ${endpoint}.`);
-    
+    try {
+      result = await response.json();
+    } catch (parseError) {
+      throw new Error('Server response was not valid JSON.');
+    }
+
+    if (!response.ok) {
+      throw new Error(result.error || `Failed to ${endpoint}.`);
+    }
+
     return result;
   };
 
@@ -762,82 +176,102 @@ const App = () => {
     if (process.env.NODE_ENV === 'test') return;
 
     try {
-        const response = await fetch(`${BACKEND_BASE_URL}/settings/service-fee?role=${role}`);
-        if (!response.ok) {
-            throw new Error(`Failed to fetch service fee: ${response.status}`);
-        }
+      const response = await fetch(`${BACKEND_BASE_URL}/settings/service-fee?role=${role}`);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch service fee: ${response.status}`);
+      }
 
-        let data;
-        try {
-            data = await response.json();
-        } catch (err) {
-            throw new Error('Service fee response was not valid JSON.');
-        }
+      let data;
+      try {
+        data = await response.json();
+      } catch (err) {
+        throw new Error('Service fee response was not valid JSON.');
+      }
 
-        if (typeof data.serviceFee === 'number') {
-            setServiceFee(data.serviceFee);
-        }
+      if (typeof data.serviceFee === 'number') {
+        setServiceFee(data.serviceFee);
+      }
     } catch (err) {
-        console.error('Error fetching service fee', err);
+      console.error('Error fetching service fee', err);
     }
   }, []);
 
   useEffect(() => {
     if (process.env.NODE_ENV === 'test') return;
-
     const role = userRole || 'b2c';
     fetchServiceFee(role);
   }, [fetchServiceFee, userRole]);
 
   const handleCalculateShipping = async () => {
     setLoading(true);
-    setError(''); setWarning('');
+    setError('');
+    setWarning('');
     try {
-        const result = await handleApiRequest('calculate-shipping', getShipmentDetails(), false);
-        const apiBaseCost = Number(result.baseShippingCost ?? result.shippingCost ?? 0);
-        const apiServiceFee = Number(result.serviceFee ?? result.service_fee ?? result.additionalFee ?? Number.NaN);
+      const result = await handleApiRequest('calculate-shipping', getShipmentDetails(), false);
+      const apiBaseCost = Number(result.baseShippingCost ?? result.shippingCost ?? 0);
+      const apiServiceFee = Number(result.serviceFee ?? result.service_fee ?? result.additionalFee ?? Number.NaN);
 
-        const effectiveServiceFee = Number.isFinite(apiServiceFee)
-            ? apiServiceFee
-            : (typeof serviceFee === 'number' ? serviceFee : parseFloat(serviceFee) || 0);
-        const totalCost = apiBaseCost + (effectiveServiceFee || 0);
+      const effectiveServiceFee = Number.isFinite(apiServiceFee)
+        ? apiServiceFee
+        : typeof serviceFee === 'number'
+        ? serviceFee
+        : parseFloat(serviceFee) || 0;
+      const totalCost = apiBaseCost + (effectiveServiceFee || 0);
 
-        setBaseShippingCost(apiBaseCost);
-        setAppliedServiceFee(effectiveServiceFee);
-        setShippingCost(totalCost);
+      setBaseShippingCost(apiBaseCost);
+      setAppliedServiceFee(effectiveServiceFee);
+      setShippingCost(totalCost);
     } catch (err) {
-        setWarning(err.message);
+      setWarning(err.message);
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
   };
 
   const handleCreateOrder = async () => {
     setOrderSending(true);
-    setError(''); setWarning('');
+    setError('');
+    setWarning('');
     try {
-        const result = await handleApiRequest('create-shipstation-order', getShipmentDetails(), true);
-        setOrderSendSuccess(`Order created successfully! Order Number: ${result.orderNumber}`);
-        setShippingCost(null);
-        setBaseShippingCost(null);
-        setAppliedServiceFee(0);
+      const result = await handleApiRequest('create-shipstation-order', getShipmentDetails(), true);
+      setOrderSendSuccess(`Order created successfully! Order Number: ${result.orderNumber}`);
+      setShippingCost(null);
+      setBaseShippingCost(null);
+      setAppliedServiceFee(0);
     } catch (err) {
-        if (err.message !== "Login required") {
-            setError(err.message);
-        }
+      if (err.message !== 'Login required') {
+        setError(err.message);
+      }
     } finally {
-        setOrderSending(false);
+      setOrderSending(false);
     }
   };
 
-  const nextStep = () => setStep(s => s + 1);
-  const prevStep = () => setStep(s => s - 1);
-  const steps = [{name: 'Origin'}, {name: 'Destination & Package'}, {name: 'Confirm & Create'}];
+  const nextStep = () => setStep((current) => current + 1);
+  const prevStep = () => setStep((current) => current - 1);
 
   const handleCreateAnother = () => {
-    setOriginName(''); setOriginCompany(''); setOriginStreet1(''); setOriginStreet2(''); setOriginCity(''); setOriginState(''); setOriginZip('');
-    setDestinationName(''); setDestinationCompany(''); setDestinationStreet1(''); setDestinationStreet2(''); setDestinationCity(''); setDestinationState(''); setDestinationZip('');
-    setWeight(''); setLength(''); setWidth(''); setHeight('');
+    setOriginName('');
+    setOriginCompany('');
+    setOriginStreet1('');
+    setOriginStreet2('');
+    setOriginCity('');
+    setOriginState('');
+    setOriginZip('');
+    setDestinationName('');
+    setDestinationCompany('');
+    setDestinationStreet1('');
+    setDestinationStreet2('');
+    setDestinationCity('');
+    setDestinationState('');
+    setDestinationZip('');
+    setIsResidential(true);
+    setWeight('');
+    setLength('');
+    setWidth('');
+    setHeight('');
+    setSelectedServiceCode('');
+    setPackageCode('');
     setShippingCost(null);
     setBaseShippingCost(null);
     setAppliedServiceFee(0);
@@ -852,9 +286,12 @@ const App = () => {
     setOrderSendSuccess('');
   };
 
-
   if (authLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-sky-50 to-emerald-50"><Loader2 className="animate-spin h-12 w-12 text-sky-500" /></div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white via-sky-50 to-emerald-50">
+        <Loader2 className="animate-spin h-12 w-12 text-sky-500" />
+      </div>
+    );
   }
 
   return (
@@ -863,36 +300,40 @@ const App = () => {
 
       <nav className="fixed top-0 left-0 right-0 bg-sky-900/95 backdrop-blur border-b border-sky-800 shadow-lg z-20 text-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-20">
-                <div className="flex-shrink-0">
-                     <img src="/logo.png" alt="Company Logo" className="h-12 w-auto object-contain"/>
-                </div>
-                <div className="flex items-center text-white">
-                    <h1 className="text-2xl lg:text-3xl font-bold hidden sm:block">
-                        Shipping Label Creator
-                    </h1>
-                    {userToken ? (
-                        <>
-                           {userRole === 'admin' && (
-                                <button
-                                    onClick={handleAdminNavigation}
-                                    className="ml-4 py-2 px-4 rounded-full font-semibold bg-sky-500 hover:bg-sky-400 flex items-center shadow-sm"
-                                >
-                                    <Settings className="h-5 w-5 mr-2" />
-                                    {isAdminRoute ? 'Go to App' : 'Dashboard'}
-                                </button>
-                           )}
-                            <button onClick={handleSignOut} className="ml-4 p-2 rounded-full text-white/90 hover:bg-white/10 transition-colors">
-                                <LogOut className="h-6 w-6" />
-                            </button>
-                        </>
-                    ) : (
-                        <button onClick={() => setShowLogin(true)} className="ml-4 py-2 px-4 rounded-full text-white font-semibold bg-sky-500 hover:bg-sky-400 flex items-center shadow-sm">
-                            <LogIn className="h-5 w-5 mr-2" /> Login
-                        </button>
-                    )}
-                </div>
+          <div className="flex items-center justify-between h-20">
+            <div className="flex-shrink-0">
+              <img src="/logo.png" alt="Company Logo" className="h-12 w-auto object-contain" />
             </div>
+            <div className="flex items-center text-white">
+              <h1 className="text-2xl lg:text-3xl font-bold hidden sm:block">Shipping Label Creator</h1>
+              {userToken ? (
+                <>
+                  {userRole === 'admin' && (
+                    <button
+                      onClick={handleAdminNavigation}
+                      className="ml-4 py-2 px-4 rounded-full font-semibold bg-sky-500 hover:bg-sky-400 flex items-center shadow-sm"
+                    >
+                      <Settings className="h-5 w-5 mr-2" />
+                      {isAdminRoute ? 'Go to App' : 'Dashboard'}
+                    </button>
+                  )}
+                  <button
+                    onClick={handleSignOut}
+                    className="ml-4 p-2 rounded-full text-white/90 hover:bg-white/10 transition-colors"
+                  >
+                    <LogOut className="h-6 w-6" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setShowLogin(true)}
+                  className="ml-4 py-2 px-4 rounded-full text-white font-semibold bg-sky-500 hover:bg-sky-400 flex items-center shadow-sm"
+                >
+                  <LogIn className="h-5 w-5 mr-2" /> Login
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       </nav>
 
@@ -901,21 +342,43 @@ const App = () => {
           <Routes>
             <Route
               path="/"
-              element={(
+              element={
                 <>
                   <div className="mb-12">
                     <Stepper currentStep={step - 1} steps={steps} />
                   </div>
                   <div className="overflow-hidden">
-                    <div className="flex transition-transform duration-500 ease-in-out" style={{ transform: `translateX(-${(step - 1) * 100}%)` }}>
+                    <div
+                      className="flex transition-transform duration-500 ease-in-out"
+                      style={{ transform: `translateX(-${(step - 1) * 100}%)` }}
+                    >
                       <div className="w-full flex-shrink-0 px-1">
                         <div className="flex flex-col space-y-8">
                           <AddressForm
                             type="origin"
-                            values={{ name: originName, company: originCompany, street1: originStreet1, street2: originStreet2, city: originCity, state: originState, zip: originZip }}
-                            setters={{ setName: setOriginName, setCompany: setOriginCompany, setStreet1: setOriginStreet1, setStreet2: setOriginStreet2, setCity: setOriginCity, setState: setOriginState, setZip: setOriginZip }}
+                            values={{
+                              name: originName,
+                              company: originCompany,
+                              street1: originStreet1,
+                              street2: originStreet2,
+                              city: originCity,
+                              state: originState,
+                              zip: originZip,
+                            }}
+                            setters={{
+                              setName: setOriginName,
+                              setCompany: setOriginCompany,
+                              setStreet1: setOriginStreet1,
+                              setStreet2: setOriginStreet2,
+                              setCity: setOriginCity,
+                              setState: setOriginState,
+                              setZip: setOriginZip,
+                            }}
                           />
-                          <button onClick={nextStep} className="w-full py-4 px-6 rounded-full font-semibold text-white bg-sky-500 hover:bg-sky-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm">
+                          <button
+                            onClick={nextStep}
+                            className="w-full py-4 px-6 rounded-full font-semibold text-white bg-sky-500 hover:bg-sky-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm"
+                          >
                             Next: Destination <ArrowRight className="ml-2" />
                           </button>
                         </div>
@@ -925,20 +388,51 @@ const App = () => {
                         <div className="flex flex-col space-y-8">
                           <AddressForm
                             type="destination"
-                            values={{ name: destinationName, company: destinationCompany, street1: destinationStreet1, street2: destinationStreet2, city: destinationCity, state: destinationState, zip: destinationZip, isResidential }}
-                            setters={{ setName: setDestinationName, setCompany: setDestinationCompany, setStreet1: setDestinationStreet1, setStreet2: setDestinationStreet2, setCity: setDestinationCity, setState: setDestinationState, setZip: setDestinationZip, setIsResidential }}
+                            values={{
+                              name: destinationName,
+                              company: destinationCompany,
+                              street1: destinationStreet1,
+                              street2: destinationStreet2,
+                              city: destinationCity,
+                              state: destinationState,
+                              zip: destinationZip,
+                              isResidential,
+                            }}
+                            setters={{
+                              setName: setDestinationName,
+                              setCompany: setDestinationCompany,
+                              setStreet1: setDestinationStreet1,
+                              setStreet2: setDestinationStreet2,
+                              setCity: setDestinationCity,
+                              setState: setDestinationState,
+                              setZip: setDestinationZip,
+                              setIsResidential,
+                            }}
                           />
                           <PackageForm
                             values={{ weight, length, width, height, selectedServiceCode, packageCode }}
-                            setters={{ setWeight, setLength, setWidth, setHeight, setSelectedServiceCode, setPackageCode }}
+                            setters={{
+                              setWeight,
+                              setLength,
+                              setWidth,
+                              setHeight,
+                              setSelectedServiceCode,
+                              setPackageCode,
+                            }}
                             onOptionChange={handleOptionChange}
                           />
                           <div className="flex justify-between gap-4">
-                            <button onClick={prevStep} className="flex-1 py-4 px-6 rounded-full font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm">
+                            <button
+                              onClick={prevStep}
+                              className="flex-1 py-4 px-6 rounded-full font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm"
+                            >
                               <ArrowLeft className="mr-2" /> Back
                             </button>
-                            <button onClick={nextStep} className="flex-1 py-4 px-6 rounded-full font-semibold text-white bg-sky-500 hover:bg-sky-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm">
-                              Next: Review & Create <ArrowRight className="ml-2" />
+                            <button
+                              onClick={nextStep}
+                              className="flex-1 py-4 px-6 rounded-full font-semibold text-white bg-sky-500 hover:bg-sky-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm"
+                            >
+                              Next: Review &amp; Create <ArrowRight className="ml-2" />
                             </button>
                           </div>
                         </div>
@@ -948,7 +442,10 @@ const App = () => {
                         <div className="grid lg:grid-cols-2 gap-8">
                           <div className="lg:col-span-1 flex flex-col space-y-8">
                             <Summary values={getShipmentDetails()} />
-                            <button onClick={prevStep} className="w-full py-4 px-6 rounded-full font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm">
+                            <button
+                              onClick={prevStep}
+                              className="w-full py-4 px-6 rounded-full font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-slate-100 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm"
+                            >
                               <ArrowLeft className="mr-2" /> Back to Edit
                             </button>
                           </div>
@@ -958,30 +455,57 @@ const App = () => {
                             <Alert type="success" message={orderSendSuccess} />
 
                             {shippingCost === null && !orderSendSuccess && (
-                              <button onClick={handleCalculateShipping} disabled={loading} className="w-full py-4 px-6 rounded-full font-semibold text-white bg-sky-500 hover:bg-sky-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm disabled:bg-slate-300 disabled:text-slate-500">
-                                {loading ? <><Loader2 className="animate-spin mr-3" size={24} />Calculating...</> : <><DollarSign className="mr-3" size={24} />Calculate Shipping</>}
+                              <button
+                                onClick={handleCalculateShipping}
+                                disabled={loading}
+                                className="w-full py-4 px-6 rounded-full font-semibold text-white bg-sky-500 hover:bg-sky-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm disabled:bg-slate-300 disabled:text-slate-500"
+                              >
+                                {loading ? (
+                                  <>
+                                    <Loader2 className="animate-spin mr-3" size={24} />Calculating...
+                                  </>
+                                ) : (
+                                  <>
+                                    <DollarSign className="mr-3" size={24} />Calculate Shipping
+                                  </>
+                                )}
                               </button>
                             )}
 
-{shippingCost !== null && !orderSendSuccess && (
-<div className="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm">
-<h2 className="text-2xl font-bold text-emerald-700 mb-3">Total Estimated Cost</h2>
-<p className="text-5xl font-extrabold text-emerald-800">${ shippingCost . toFixed ( 2 ) }</p>
-<div className="mt-4 text-emerald-700 space-y-1">
-<p>Base Rate: ${ baseShippingCost ?. toFixed ( 2 ) ?? '—' }</p>
-<p>Service Fee: ${ appliedServiceFee . toFixed ( 2 ) }</p>
-</div>
-<button onClick={handleCreateOrder} disabled={orderSending} className="mt-6 w-full py-4 px-6 rounded-full font-semibold text-white bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm disabled:bg-slate-300 disabled:text-slate-500">
-{orderSending ? <><Loader2 className="animate-spin mr-3" size={24} />Processing...</> : <><Send className="mr-3" size={24} />Create Shipping Label</>}
-</button>
-</div>
-)}
+                            {shippingCost !== null && !orderSendSuccess && (
+                              <div className="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm">
+                                <h2 className="text-2xl font-bold text-emerald-700 mb-3">Total Estimated Cost</h2>
+                                <p className="text-5xl font-extrabold text-emerald-800">${shippingCost.toFixed(2)}</p>
+                                <div className="mt-4 text-emerald-700 space-y-1">
+                                  <p>Base Rate: ${baseShippingCost?.toFixed(2) ?? '—'}</p>
+                                  <p>Service Fee: ${appliedServiceFee.toFixed(2)}</p>
+                                </div>
+                                <button
+                                  onClick={handleCreateOrder}
+                                  disabled={orderSending}
+                                  className="mt-6 w-full py-4 px-6 rounded-full font-semibold text-white bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm disabled:bg-slate-300 disabled:text-slate-500"
+                                >
+                                  {orderSending ? (
+                                    <>
+                                      <Loader2 className="animate-spin mr-3" size={24} />Processing...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Send className="mr-3" size={24} />Create Shipping Label
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            )}
 
                             {orderSendSuccess && (
                               <div className="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm">
                                 <h2 className="text-2xl font-bold text-emerald-700 mb-3">Shipping Label Created!</h2>
                                 <p className="text-emerald-700">{orderSendSuccess}</p>
-                                <button onClick={handleCreateAnother} className="mt-6 w-full py-4 px-6 rounded-full font-semibold text-white bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm">
+                                <button
+                                  onClick={handleCreateAnother}
+                                  className="mt-6 w-full py-4 px-6 rounded-full font-semibold text-white bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-lg active:scale-95 transition-transform shadow-sm"
+                                >
                                   Create Another Shipment
                                 </button>
                               </div>
@@ -992,15 +516,15 @@ const App = () => {
                     </div>
                   </div>
                 </>
-              )}
+              }
             />
             <Route
               path="/admin"
-              element={(
+              element={
                 <AdminRoute userRole={userRole} userToken={userToken}>
                   <AdminDashboard userToken={userToken} />
                 </AdminRoute>
-              )}
+              }
             />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
